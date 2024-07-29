@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import csv
 from lmfit import minimize, Parameters
-from continuum_mechanics import *
+import numpy as np
+from continuum_mechanics import calculate_stress_tensor_function_diagonal, evaluate_stress_tensor_function_diagonal
 
 
 class BiaxialNovak:

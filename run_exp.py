@@ -82,7 +82,7 @@ if __name__ == '__main__':
     num_params = len(list(dict.fromkeys(re.findall('p[0-9]+', ps)))) + 1
     print('Final CHESRA result:')
     print('\tBest function is psi = %s' % sp.simplify(ps, locals={'sp.exp': sp.exp}))
-    print('\tBest fitness is %s' % es)
+    print('\tBest fitness is %s' % error[lab].tolist()[es])
 
     # do the fit
     for data in args.data_lst:

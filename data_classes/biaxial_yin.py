@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import csv
 from lmfit import minimize, Parameters
-from continuum_mechanics import *
+import numpy as np
+from continuum_mechanics import calculate_S_tensor_function, evaluate_S_tensor_function
 
 class BiaxialYin:
     def __init__(self):
@@ -216,8 +217,6 @@ class BiaxialYin:
                     shear = shear_lst[s]
                     for ratio in ratio_lst:
                         S_lst = []
-                        S_lst_paper = []
-                        Eii_data, S_data = self.get_data(shear, ratio, path=data_path)
 
                         for Eii in Eii_lst:
                             r = ratio_to_value[ratio]
