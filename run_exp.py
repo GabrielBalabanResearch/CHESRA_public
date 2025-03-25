@@ -16,6 +16,9 @@ from data_classes.biaxial_novak import BiaxialNovak
 # Define a function to parse command-line arguments
 def parse_args():
     parser = argparse.ArgumentParser(description='Run CHESRA with specified parameters.')
+    parser.add_argument('--data_lst', nargs='+', default=[BiaxialYin(), EquibiaxialNovak(), BiaxialNovak(),
+                                                          BiaxialSommer(), ShearDokos(), ShearSommer()],
+                        help='List of datasets to include for SEF training')
     parser.add_argument('--alpha', type=float, required=True, help='Hyperparameter')
     parser.add_argument('--save_to', type=str, default='.', help='Path where to save the results')
     parser.add_argument('--max_gen', type=int, default=50, help='Number of generations')
@@ -65,7 +68,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    args.data_lst = [BiaxialYin(), EquibiaxialNovak(), BiaxialNovak(), BiaxialSommer(), ShearDokos(), ShearSommer()]
 
     all_individuals = main(args)
 
