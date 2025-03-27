@@ -1,13 +1,18 @@
+import numpy as np
+import sympy as sp
 import matplotlib.pyplot as plt
 import csv
-from lmfit import minimize, Parameters
-import numpy as np
-from continuum_mechanics import calculate_stress_tensor_function_diagonal, evaluate_stress_tensor_function_diagonal
+from scipy import optimize
+from lmfit import minimize, Parameters, report_fit
+from continuum_mechanics import *
+import time
+import pandas as pd
 
 
 class EquibiaxialNovak:
     def __init__(self):
         self.exp_type = 'biaxial'
+        self.name = 'Equibiaxial Novak'
 
     def add_parameters(self, fit_params, num_params, i, init_vals):
         """
@@ -15,7 +20,6 @@ class EquibiaxialNovak:
         :param fit_params: parameters to be optimized (type: lmfit.Parameters())
         :param num_params: number of parameters in the strain energy function
         :param i: index of shear dataset
-        :param init_vals: initial parameter values to be used
         """
         # add a parameter in the list for every parameter in the strain energy function
         # mins = [0, 0.001, 0.007, 1, 1, 1, 1, 1, 1]
@@ -34,8 +38,6 @@ class EquibiaxialNovak:
         """
         Extracts the experimental data biaxial data from novak et al.
         :param shear: type of shear, i.e. 'ff' or 'ss'
-        :param ratio: ratio along the two stretch directions
-        :param path: path reference to the data file
         :return: amount of stretch lambda and stress sigma as a list
         """
         filename = 'Data/novak/'
@@ -49,18 +51,20 @@ class EquibiaxialNovak:
                 sigma_data.append(float(line['y']))
         return np.array(lam_data), sigma_data
 
-    def optimize_psi(self, psi, num_params, path, locs, init_vals=[1]):
+    def optimize_psi(self, psi, num_params, path, locs, var='I', init_vals=[1]):
         """
         Run the optimization to find the best parameters for the given psi.
         :param psi: strain energy function (callable function with arguments I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p)
         :param num_params: number of parameters to be optimized in psi (i.e. len(p))
         :param shear_lst: list of shear types under consideration
-        :param init_vals: initial parameter values to be used
-        :return: optimized parameters, sum of squared residuals, experimental data, residuals, number of function evaluations
+        :return: list containing optimized parameters, reduced chi squared
         """
 
         # calculate the symbolic stress tensor function from psi for the given shear type
-        sigma_function = calculate_stress_tensor_function_diagonal(psi, num_params)
+        if var == 'I':
+            sigma_function = calculate_stress_tensor_function_diagonal(psi, num_params)
+        elif var == 'E':
+            sigma_function = calculate_stress_tensor_function_diagonal_E(psi, num_params)
 
         p_best_dict = {}
         SSE_all = 0
@@ -88,10 +92,11 @@ class EquibiaxialNovak:
                     self.add_parameters(fit_params, num_params, s, init_vals)
 
                 # run the global fit to all the data sets and measure the time needed
+                start_time = time.time()
                 result = minimize(self.objective, fit_params,
                                   args=(
-                                  lam_f_data_all, lam_s_data_all, sigma_function, num_params, sigma_data_all))
-
+                                  lam_f_data_all, lam_s_data_all, sigma_function, num_params, sigma_data_all, var))
+                end_time = time.time()
                 # print("Needed %.1f s for optimization." % (end_time - start_time))
 
                 # return the best parameters (only the first [num_params] corresponding to the first dataset since the other
@@ -107,7 +112,7 @@ class EquibiaxialNovak:
 
         return p_best_dict, SSE_all, Y_a, res_all, nfev_dict
 
-    def objective(self, params, lam_f_data_all, lam_s_data_all, sigma_function, num_params, sigma_data_all):
+    def objective(self, params, lam_f_data_all, lam_s_data_all, sigma_function, num_params, sigma_data_all, var):
         """
         The objective function to be minimized.
         :param params: parameters to be optimized (type: lmfit.Parameters())
@@ -124,11 +129,11 @@ class EquibiaxialNovak:
         for shear in sigma_data_all.keys():
             for j in range(len(sigma_data_all[(shear)])):
                 resid.append((sigma_data_all[(shear)][j] - self.eval_sigma(shear, lam_f_data_all[
-                    (shear)][j], lam_s_data_all[(shear)][j], params, sigma_function, num_params, i)))
+                    (shear)][j], lam_s_data_all[(shear)][j], params, sigma_function, num_params, i, var)))
             i += 1
         return np.array(resid)
 
-    def eval_sigma(self, shear, lam_f, lam_s, params, sigma_function, num_params, i):
+    def eval_sigma(self, shear, lam_f, lam_s, params, sigma_function, num_params, i, var):
         """
         Evaluates the sigma function with the current set of parameters.
         :param shear: type of shear, i.e. 'ns', 'nf', 'sn', 'sf', 'fn' or 'fs'
@@ -145,35 +150,57 @@ class EquibiaxialNovak:
             p.append(params['p%i_%i' % (n + 1, i + 1)].value)
 
         # evaluate the stress tensor with these parameters
-        return evaluate_stress_tensor_function_diagonal(shear, lam_f, lam_s, p, sigma_function)
+        if var == 'I':
+            return evaluate_stress_tensor_function_diagonal(shear, lam_f, lam_s, p, sigma_function)
+        elif var == 'E':
+            return evaluate_stress_tensor_function_diagonal_E(shear, lam_f, lam_s, p, sigma_function)
 
+    def print_params(self, params, num_params, digits):
+        novak2_inner1 = params[('innerLV', 1)][1::]
+        novak2_inner2 = params[('innerLV', 2)][1::]
+        novak2_middle1 = params[('middleLV', 1)][1::]
+        novak2_middle2 = params[('middleLV', 2)][1::]
+        novak2_outer1 = params[('outerLV', 1)][1::]
+        novak2_outer2 = params[('outerLV', 2)][1::]
+        novak2_sept1 = params[('septum', 1)][1::]
+        novak2_sept2 = params[('septum', 2)][1::]
 
-    def fit_data(self, ind, num_params, data_path, plot=False, save_to='./', fs=18, only_data=False, init_vals=[1],
-                 not_vary=[]):
-        """ Takes in a function found by the GA and finds the best parameters.
-        Args:
-            ind: A given function psi found by the GA.
-            num_params: number of parameters of psi.
-            shears: shear types you would like to include in the fit.
-            data_path: data path of the experimental data.
-            plot: would you like to plot this data?
-            save to: where would you like to save this data to?
-            fs: fontsize for the plot.
-            only_data: should only the data be plotted?
-            init_vals: initial parameters for the optimization.
-            not_vary: indices of parameters that should not be optimized.
-        Return:
-            sum of squared residuals, experimental data, residuals, number of function evaluations, optimized parameters
-        """
+        params_str = r'\textbf{Novak}'
+        params_line2 = r'(equibiax.)'
+        names = [(r'\textbf{sub-endo.}', 'sp. 1'), (r'\textbf{sub-endo.}', 'sp. 2'), (r'\textbf{mid-myo.}', 'sp. 1'),
+                 (r'\textbf{mid-myo.}', 'sp. 2'), (r'\textbf{sub-epi.}', 'sp. 1'), (r'\textbf{sub-epi.}', 'sp. 2'),
+                 (r'\textbf{mid-sept.}', 'sp. 1'), (r'\textbf{mid-sept.}', 'sp. 2')]
+        data = [novak2_inner1, novak2_inner2, novak2_middle1, novak2_middle2, novak2_outer1, novak2_outer2,
+                novak2_sept1, novak2_sept2]
+
+        print(params_str + ' &'*(num_params-1) + r' \\')
+        print(params_line2 + ' &'*(num_params-1) + r' \\')
+        for d, n in zip(data, names):
+            string = n[0]
+            string2 = n[1]
+            for i in range(num_params-1):
+                number = round(d[i], digits)
+                if number == 0.0:
+                    number = '%.1E' % d[i]
+                    number = number[:3] + r'\times 10^{-%s}' % number[-1]
+                else:
+                    number = str(number)
+                string = string + ' & ' + r'\multirow{2}{*}{$ ' + number + r' $}'
+                string2 = string2 + ' &'
+            print(string + r' \\')
+            print(string2 + r' \\')
+            print(r'\hline')
+
+    def fit_data(self, ind, num_params, data_path, plot=False, save_to='./', fs=18, only_data=False, with_HO=True, digits=3, init_vals=[1]):
+
 
         def psi_eq(I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p):
             """
-            Potential strain-energy-function psi.
+            Strain-energy-function psi as defined in eq. 5.38 in the paper.
             :param I_i: invariants
             :param p: list of parameters [p1, p2, ... , pn]
             :return: psi
             """
-
             for par in range(1, num_params):
                 locals()[f"p{par}"] = p[par]
 
@@ -185,6 +212,9 @@ class EquibiaxialNovak:
         psi = psi_eq
 
 
+        # define strain energy function to be optimized and number of parameters in the function
+        num_params = num_params  # number of parameters to be optimized, i.e. the length of the parameter list p from psi
+
         # define the types of shear for which the function should be fitted (default is all but maybe at the beginning we only want to do one type)
         locs = ['innerLV', 'middleLV', 'outerLV', 'septum']
 
@@ -193,30 +223,22 @@ class EquibiaxialNovak:
             p_best_dict, SSE_fit_all, Y_a, res, nfev = self.optimize_psi(psi, num_params, data_path, locs=locs, init_vals=init_vals)
 
             if plot is True:
-                # define fixed color for each shear type
-                colors = {1: 'royalblue', 2: 'crimson'}
-                markers = {1: 'o', 2: 's'}
-                titles = {'septum': 'mid-septum', 'innerLV': 'sub-endocardium', 'middleLV': 'mid-myocardium',
-                          'outerLV': 'sub-epicardium'}
+                titles = {'septum': 'septum', 'innerLV': 'sub-endo', 'middleLV': 'mid-myo',
+                          'outerLV': 'sub-epi'}
+
 
                 lam_lst = np.linspace(1.0, 1.36, 20)  # lambda values to be plotted
 
                 # calculate the symbolic stress tensor function from psi
                 sigma_function = calculate_stress_tensor_function_diagonal(psi, num_params)
 
-                fig = plt.figure(figsize=(6.4, 14.4))
-                axs = fig.subplots(4, 2, sharex=True, sharey=True)
-                save = True
-
                 data_save1 = {'x':lam_lst}
                 data_save2 = {'x': lam_lst}
                 data_save = {'x': lam_lst}
                 for s, shear in enumerate(['ff', 'ss']):
-                    n = 1
                     for l, loc in enumerate(locs):
                         for num in range(1, 3):
                             sigma_lst = []
-                            sigma_lst_paper = []
                             for lam in lam_lst:
                                 lam_f = lam
                                 lam_s = lam
@@ -226,44 +248,24 @@ class EquibiaxialNovak:
                                     evaluate_stress_tensor_function_diagonal(shear, lam_f, lam_s,
                                                                              p_best_dict[(loc, num)], sigma_function))
 
-                            if only_data is False:
-                                data_save[(shear, titles[loc], num)] = sigma_lst
-                                if num == 1:
-                                    data_save1['%s, %s' % (shear, titles[loc])] = sigma_lst
-                                elif num == 2:
-                                    data_save2['%s, %s' % (shear, titles[loc])] = sigma_lst
-                                axs[l, s].plot(lam_lst, sigma_lst, color=colors[num])
+                            data_save[(shear, titles[loc], num)] = sigma_lst
+                            if num == 1:
+                                data_save1['%s, %s' % (shear, titles[loc])] = sigma_lst
+                            elif num == 2:
+                                data_save2['%s, %s' % (shear, titles[loc])] = sigma_lst
 
 
-                            # plot the experimental data
-                            lam_data, sigma_data = self.get_data(shear, loc, num, path=data_path)
-                            if s == 0:
-                                axs[l, s].plot(lam_data, sigma_data, marker=markers[num], ls='', fillstyle='none',
-                                               color=colors[num], label=f'sp. {n}')
-                            else:
-                                axs[l, s].plot(lam_data, sigma_data, marker=markers[num], ls='', fillstyle='none',
-                                               color=colors[num])
-                            # axs[l, s].set_ylabel("$\sigma_{%s}$ [kPa]" % shear, fontsize=fs)
-                            axs[l, s].tick_params(axis='both', which='major', labelsize=fs)
-                            axs[l, s].spines['right'].set_visible(False)
-                            axs[l, s].spines['top'].set_visible(False)
-                            axs[l, s].set_title(titles[loc], fontsize=fs)
 
-                            n += 1
-                        # axs[l, 0].text(.05, .95, labels[loc], transform=axs[l, 0].transAxes, ha="left", va="top", fontsize=fs)
-                        axs[l, 0].legend(frameon=False, fontsize=fs, handletextpad=0)
-                        axs[l, 0].set_ylim((0, 18))
-                        axs[l, 0].set_xlim((1, 1.36))
-                        axs[l, 1].set_ylim((0, 18))
-                        axs[l, 1].set_xlim((1, 1.36))
-                        axs[-1, s].set_xlabel("extension $\lambda_{%s}$" % shear, fontsize=fs)
-                fig.supylabel("stress $\sigma$ [kPa]", fontsize=fs)
+                df = pd.DataFrame(data=data_save1)
+                df.to_csv(save_to + 'data_equibiax_novak1.csv')
+                df = pd.DataFrame(data=data_save2)
+                df.to_csv(save_to + 'data_equibiax_novak2.csv')
+                df = pd.DataFrame(data=data_save)
+                df.to_csv(save_to + 'data_equibiax_novak.csv')
 
-                if save is True:
-                    plt.tight_layout()
-                    plt.subplots_adjust(wspace=0.4)
-                    plt.show()
-                    fig.savefig(save_to + '/plot_equibiaxial_novak.png', dpi=300)
+
+
+            COD = SSE_fit_all / np.sum((np.array(Y_a) - np.mean(Y_a)) ** 2)
 
         except Exception as e:
 
@@ -273,6 +275,91 @@ class EquibiaxialNovak:
             Y_a = [1]
             res = [1]
             nfev = np.inf
-            p_best_dict = [1] * num_params
+
+        return SSE_fit_all, Y_a, res, nfev, p_best_dict
+
+
+    def fit_psi_to_data(self, psi, num_params, data_path, plot=False, save_to='./', fs=18, only_data=False, var='E', init_vals=[1]):
+
+        # define strain energy function to be optimized and number of parameters in the function
+        num_params = num_params  # number of parameters to be optimized, i.e. the length of the parameter list p from psi
+
+        # define the types of shear for which the function should be fitted (default is all but maybe at the beginning we only want to do one type)
+        locs = ['innerLV', 'middleLV', 'outerLV', 'septum']
+
+
+        # do the fit
+        p_best_dict, SSE_fit_all, Y_a, res, nfev = self.optimize_psi(psi, num_params, data_path, locs=locs, var=var, init_vals=init_vals)
+
+        if plot is True:
+            # define fixed color for each shear type
+            colors = {1: 'royalblue', 2: 'crimson'}
+            markers = {1: 'o', 2: 's'}
+            titles = {'septum': 'mid-septum', 'innerLV': 'sub-endocardium', 'middleLV': 'mid-myocardium',
+                      'outerLV': 'sub-epicardium'}
+            # colors = {'septum': 'crimson', 'innerLV': 'royalblue', 'middleLV': 'cadetblue', 'outerLV': 'orange'}
+            # markers = {'septum': 's', 'innerLV': 'o', 'middleLV': 'p', 'outerLV': 'd'}
+            # labels = {'septum': 'septum', 'innerLV': 'inner LV', 'middleLV': 'middle LV', 'outerLV': 'outer LV'}
+
+            lam_lst = np.linspace(1.0, 1.36, 20)  # lambda values to be plotted
+
+            # calculate the symbolic stress tensor function from psi
+            sigma_function = calculate_stress_tensor_function_diagonal_E(psi, num_params)
+
+
+            fig = plt.figure(figsize=(6.4, 9.6))  #
+
+            axs = fig.subplots(4, 2, sharex=True, sharey=True)
+            data_save = {'x':lam_lst}
+            for s, shear in enumerate(['ff', 'ss']):
+                n = 1
+                for l, loc in enumerate(locs):
+                    for num in range(1, 3):
+                        sigma_lst = []
+                        sigma_lst_paper = []
+                        for lam in lam_lst:
+                            lam_f = lam
+                            lam_s = lam
+
+                            # evaluate sigma for the given shear, gamma and fit parameters
+                            sigma_lst.append(
+                                evaluate_stress_tensor_function_diagonal_E(shear, lam_f, lam_s,
+                                                                         p_best_dict[(loc, num)], sigma_function))
+                        if only_data is False:
+                            data_save[(shear, loc, num)] = sigma_lst
+                            axs[l, s].plot(lam_lst, sigma_lst, color=colors[num])
+
+                        # plot the experimental data
+                        lam_data, sigma_data = self.get_data(shear, loc, num, path=data_path)
+                        if s == 0:
+                            axs[l, s].plot(lam_data, sigma_data, marker=markers[num], ls='', fillstyle='none',
+                                           color=colors[num], label=f'sp. {n}')
+                        else:
+                            axs[l, s].plot(lam_data, sigma_data, marker=markers[num], ls='', fillstyle='none',
+                                           color=colors[num])
+                        # axs[l, s].set_ylabel("$\sigma_{%s}$ [kPa]" % shear, fontsize=fs)
+                        axs[l, s].tick_params(axis='both', which='major', labelsize=fs)
+                        axs[l, s].spines['right'].set_visible(False)
+                        axs[l, s].spines['top'].set_visible(False)
+                        axs[l, s].set_title(titles[loc], fontsize=fs)
+
+                        n += 1
+                    # axs[l, 0].text(.05, .95, labels[loc], transform=axs[l, 0].transAxes, ha="left", va="top", fontsize=fs)
+                    axs[l, 0].legend(frameon=False, fontsize=fs, handletextpad=0)
+                    axs[l, 0].set_ylim((0, 18))
+                    axs[l, 0].set_xlim((1, 1.36))
+                    axs[l, 1].set_ylim((0, 18))
+                    axs[l, 1].set_xlim((1, 1.36))
+                    axs[-1, s].set_xlabel("extension $\lambda_{%s}$" % shear, fontsize=fs)
+            fig.supylabel("stress $\sigma$ [kPa]", fontsize=fs)
+
+            df = pd.DataFrame(data=data_save)
+            df.to_csv(save_to + 'data_equibiax_novak.csv')
+            plt.tight_layout()
+            plt.show()
+            fig.savefig(save_to + 'plot_equibiaxial_novak.png', dpi=300)
+            fig.savefig(save_to + 'plot_equibiaxial_novak.pdf', dpi=300)
+            fig.savefig(save_to + 'plot_equibiaxial_novak.svg', dpi=300)
+
 
         return SSE_fit_all, Y_a, res, nfev, p_best_dict

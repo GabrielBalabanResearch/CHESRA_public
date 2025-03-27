@@ -4,8 +4,12 @@ import pandas as pd
 import numpy as np
 import argparse
 import re
-from ga_functions import run_function
-from ga_functions import start_ga
+import os
+import sys
+
+p = '../../'
+sys.path.insert(0, p)
+from ga_functions import run_function, start_ga
 from data_classes.shear_sommer import ShearSommer
 from data_classes.biaxial_sommer import BiaxialSommer
 from data_classes.biaxial_yin import BiaxialYin
@@ -13,14 +17,15 @@ from data_classes.shear_dokos import ShearDokos
 from data_classes.equibiaxial_novak import EquibiaxialNovak
 from data_classes.biaxial_novak import BiaxialNovak
 
+
 # Define a function to parse command-line arguments
 def parse_args():
     parser = argparse.ArgumentParser(description='Run CHESRA with specified parameters.')
-    parser.add_argument('--data_lst', nargs='+', default=[BiaxialYin(), EquibiaxialNovak(), BiaxialNovak(),
-                                                          BiaxialSommer(), ShearDokos(), ShearSommer()],
-                        help='List of datasets to include for SEF training')
-    parser.add_argument('--alpha', type=float, required=True, help='Hyperparameter')
-    parser.add_argument('--save_to', type=str, default='.', help='Path where to save the results')
+    parser.add_argument('--alpha', type=float, default=0.001, help='Hyperparameter alpha which balances the function length penalty in the fitness function')
+    parser.add_argument('--data_lst', nargs='+', default=[BiaxialYin(), EquibiaxialNovak(), BiaxialNovak(), BiaxialSommer(), ShearDokos(), ShearSommer()],
+                        help='Data used for strain energy function training')
+    parser.add_argument('--save_to', type=str, default='plot_data/', help='Path where to save the results')
+    parser.add_argument('--exp_data_path', type=str, default='../../', help='Path to the Data folder')
     parser.add_argument('--max_gen', type=int, default=50, help='Number of generations')
     parser.add_argument('--pop_size', type=int, default=200, help='Population size')
     parser.add_argument('--hof_size', type=int, default=20, help='Hall of fame size')
@@ -31,12 +36,12 @@ def parse_args():
     parser.add_argument('--varis', nargs='+', default=[
         '(I1-3)**2', '(I2-3)**2', '(I4f-1)**2', '(I4s-1)**2', '(I4n-1)**2', '(I5f-1)**2',
         '(I5s-1)**2', '(I5n-1)**2', '(I8fs)**2', '(I8fn)**2', '(I8ns)**2'
-    ], help='List of variables')
-    parser.add_argument('--funcs', nargs='+', default=['sp.exp'], help='List of functions')
-    parser.add_argument('--opts', nargs='+', default=['+', '*'], help='List of operators')
-    parser.add_argument('--check_duplicates', type=int, default=1, help='Check for duplicates')
+    ], help='List of variables to be used to generate strain energy functions')
+    parser.add_argument('--funcs', nargs='+', default=['sp.exp'], help='List of functions to be used to generate strain energy functions')
+    parser.add_argument('--opts', nargs='+', default=['+', '*'], help='List of operators to be used to generate strain energy functions')
+    parser.add_argument('--check_duplicates', type=bool, default=True, help='Check for duplicates in the population. If True, duplicates will be replaced by random functions.')
     parser.add_argument('--multithread', type=bool, default=True, help='Use multithreading')
-    parser.add_argument('--n_cores', type=int, default=64, help='Number of cores to use')
+    parser.add_argument('--n_cores', type=int, default=64, help='Number of cores to use for multithreading')
 
     return parser.parse_args()
 
@@ -50,7 +55,7 @@ def main(args):
         data_lst=args.data_lst,
         hyperparameter=args.alpha,
         save_to=args.save_to,
-        exp_data_path='',
+        exp_data_path=args.exp_data_path,
         mate_prob=args.mate_prob,
         mut_reduce=args.mut_reduce,
         mut_alter=args.mut_alter,
@@ -68,7 +73,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-
+    os.makedirs(args.save_to, exist_ok=True)
     all_individuals = main(args)
 
     # read the CHESRA output
@@ -83,9 +88,10 @@ if __name__ == '__main__':
     ind = [[ps]]
     num_params = len(list(dict.fromkeys(re.findall('p[0-9]+', ps)))) + 1
     print('Final CHESRA result:')
-    print('\tBest function is psi = %s' % sp.simplify(ps, locals={'sp.exp': sp.exp}))
-    print('\tBest fitness is %s' % error[lab].tolist()[es])
+    print('\tBest function is psi = %s' % sp.simplify(ps))
+    print('\tBest fitness is %.1E' % error[lab].tolist()[es])
 
     # do the fit
     for data in args.data_lst:
-        SSE, Y_a, res, nfev, p_best = run_function(data.fit_data, ind, num_params, plot=True, save_to=args.save_to)
+        SSE, Y_a, res, nfev, p_best = run_function(data.fit_data, ind, num_params, data_path=args.exp_data_path, plot=True, save_to=args.save_to)
+        sRSS = SSE / np.sum((np.array(Y_a) - np.mean(Y_a)) ** 2)

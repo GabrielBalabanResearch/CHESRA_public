@@ -363,3 +363,240 @@ def evaluate_stress_tensor_function_diagonal(shear, lam_f, lam_s, p, sigma_funct
 
     # return the component of the sigma tensor belonging to the given type of shear
     return float(sigma)
+
+def calculate_sigma_sym_E(psi, num_params):
+    dim = 3  # dimension of the tensors
+
+    # symbolic representation of the deformation gradient F, the invariants and the parameters
+    global F_sym, p_sym, Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym
+
+    F_sym = sp.MatrixSymbol("F_sym", dim, dim)
+    Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym = sp.symbols(
+        'Eff_sym Efs_sym Efn_sym Esf_sym Ess_sym Esn_sym Enf_sym Ens_sym Enn_sym', real=True)
+    E_sym = [[Eff_sym, Efs_sym, Efn_sym], [Esf_sym, Ess_sym, Esn_sym], [Enf_sym, Ens_sym, Enn_sym]]
+    p_sym = [sp.symbols("p%i_sym" % (n)) for n in range(num_params)]
+
+
+    # call strain energy function
+    psi = psi(Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym, p_sym)
+
+    # calculate the components of the stress tensor
+    sigma_sym = sp.zeros(dim)
+    for i in range(dim):
+        for j in range(dim):
+            # sigma_ij = sum_k sum_l F_ik dpsi/dE_kl F_jl
+            sum_k = 0
+            for k in range(dim):
+                for l in range(dim):
+                    sum_k += F_sym[i, k] * sp.diff(psi, E_sym[k][l]) * F_sym[j, l]
+
+            sigma_sym[i, j] = sum_k
+
+    # incorporate the incompressibility conditions
+    sigma_sym[0, 0] = sigma_sym[0, 0] - sigma_sym[2, 2]
+    sigma_sym[1, 1] = sigma_sym[1, 1] - sigma_sym[2, 2]
+
+    return sigma_sym
+
+def calculate_stress_tensor_function_E(psi, num_params):
+    """
+    Calculates the stress tensor sigma as as symbolic function of F, p and I according to eq. 5.12 in the paper.
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns
+    :param gamma: number of parameters in the strain energy function
+    :return: sigma_function, i.e. a symbolic function sigma(F,p1,...,pn, I1,...,I8ns)
+    """
+    dim = 3
+    axes_to_indices = {"f": 0, "s": 1, "n": 2}  # convert string labelling of axes to indices
+
+    sigma_sym = calculate_sigma_sym_E(psi, num_params)
+
+    # convert the symbolic function to a numpy function to save computation time. Therefore, we need to tell the
+    # lambdify function all the variables in the function
+    symbols_lst = [Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym]
+    symbols_lst.extend(p_sym)
+    gamma_sym = sp.symbols("gamma_sym", real=True)
+    symbols_lst.append(gamma_sym)
+
+    sigma_function = {}
+    for shear in ['fs', 'fn', 'sf', 'sn', 'nf', 'ns']:
+        sigma_sym_shear = copy.copy(sigma_sym)
+        ind1 = axes_to_indices[shear[0]]
+        ind2 = axes_to_indices[shear[1]]
+
+        # already put the deformation gradient in the expression because of all the null components this saves
+        # computation time
+        F = deformation_gradient(shear, gamma_sym)
+        sigma_sym_shear = sigma_sym_shear.subs(F_sym, F)
+        for i in range(dim):
+            for j in range(dim):
+                sigma_sym_shear = sigma_sym_shear.subs(F_sym[i, j], F[i, j])
+        sigma_sym_shear = sp.simplify(sigma_sym_shear[ind1, ind2])
+
+        # convert to numpy
+        sigma_shear = sp.lambdify(symbols_lst, sigma_sym_shear, modules=[{"Trace": np.trace}, "numpy"])
+        sigma_function[shear] = sigma_shear
+        # print(lambdastr(symbols_lst, sigma_sym_shear))
+    return sigma_function
+
+def evaluate_stress_tensor_function_E(shear, gamma, p, sigma_function):
+    """
+    Calculates the stress tensor sigma according to eq. 5.12 in the paper.
+    :param shear: type of shear ('fs', 'sf', 'sn', 'ns', 'fn' or 'nf')
+    :param gamma: amount of shear
+    :param p: list containing all parameters of the strain energy function
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p
+    :return: sigma_ij, i.e. the matrix element of sigma corresponding to the given type of shear
+    """
+
+    # calculate real deformation gradient and corresponding invariants for the given type of shear with numpy
+    F = deformation_gradient_np(shear, gamma)
+    C = np.dot(F.T, F)
+    E = (C - np.identity(3))/2
+
+
+    # evaluate the sigma function with the given parameters
+    sigma_function_comp = sigma_function[shear]
+    sigma = sigma_function_comp(E[0,0], E[0,1], E[0,2], E[1,0], E[1,1], E[1,2], E[2,0], E[2,1], E[2,2], *p, gamma)
+
+    # return the component of the sigma tensor belonging to the given type of shear
+    return float(sigma)
+
+
+def calculate_S_tensor_function_E(psi, num_params):
+    """
+    Calculates the second Piola-Kirchhoff stress tensor sigma as as symbolic function of F, p and I according to eq. 5.12 in the paper.
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns
+    :param gamma: number of parameters in the strain energy function
+    :return: sigma_function, i.e. a symbolic function sigma(F,p1,...,pn, I1,...,I8ns)
+    """
+    axes_to_indices = {"f": 0, "s": 1, "n": 2}  # convert string labelling of axes to indices
+    dim = 3
+
+    lam_f_sym = sp.symbols("lam_f_sym", real=True)
+    lam_s_sym = sp.symbols("lam_s_sym", real=True)
+
+    F_sym_lam = sp.Matrix([[lam_f_sym, 0, 0], [0, lam_s_sym, 0], [0, 0, 1 / (lam_f_sym * lam_s_sym)]])
+    sigma_sym = calculate_sigma_sym_E(psi, num_params)
+    S_sym = F_sym_lam.det() * F_sym_lam.inv() * sigma_sym * F_sym_lam.inv().adjugate()
+
+    # convert the symbolic function to a numpy function to save computation time. Therefore, we need to tell the
+    # lambdify function all the variables in the function
+    symbols_lst = [Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym]
+    symbols_lst.extend(p_sym)
+    symbols_lst.append(lam_f_sym)
+    symbols_lst.append(lam_s_sym)
+
+    S_function = {}
+    for shear in ['ff', 'ss']:
+        ind1 = axes_to_indices[shear[0]]
+        ind2 = axes_to_indices[shear[1]]
+        S_sym_shear = copy.copy(S_sym[ind1, ind2])
+
+        F = np.array([[lam_f_sym, 0, 0], [0, lam_s_sym, 0], [0, 0, 1 / (lam_f_sym * lam_s_sym)]])
+
+        # already put the deformation gradient in the expression because of all the null components this saves
+        # computation time
+        S_sym_shear = S_sym_shear.subs(F_sym, F)
+        S_sym_shear = S_sym_shear.subs(F_sym_lam, F)
+        for i in range(dim):
+            for j in range(dim):
+                S_sym_shear = S_sym_shear.subs(F_sym[i, j], F[i, j])
+        S_sym_shear = sp.simplify(S_sym_shear)
+
+        # convert to numpy
+        S_shear = sp.lambdify(symbols_lst, S_sym_shear, modules=[{"Trace": np.trace}, "numpy"])
+        S_function[shear] = S_shear
+        # print(lambdastr(symbols_lst, S_shear))
+    return S_function
+
+
+def evaluate_S_tensor_function_E(shear, lam_f, lam_s, p, S_function):
+    """
+    Calculates the Piola-Kirchhoff stress tensor S according to eq. 5.12 in the paper.
+    :param shear: type of shear ('ff', 'ss')
+    :param lam_f, lam_s: amount of shear in f or respectively s direction
+    :param p: list containing all parameters of the strain energy function
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p
+    :return: S_ij, i.e. the matrix element of S corresponding to the given type of shear
+    """
+
+    # calculate real deformation gradient and corresponding invariants for the given type of shear with numpy
+    F = np.array([[lam_f, 0, 0], [0, lam_s, 0], [0, 0, 1 / (lam_f * lam_s)]])
+    C = np.dot(F.T, F)
+    E = (C - np.identity(3)) / 2
+
+
+    # evaluate the sigma function with the given parameters
+    S_function_comp = S_function[shear]
+    S = S_function_comp(E[0,0], E[0,1], E[0,2], E[1,0], E[1,1], E[1,2], E[2,0], E[2,1], E[2,2], *p, lam_f, lam_s)
+
+    # return the component of the sigma tensor belonging to the given type of shear
+    return float(S)
+
+
+def calculate_stress_tensor_function_diagonal_E(psi, num_params):
+    """
+    Calculates the stress tensor sigma as as symbolic function of F, p and I according to eq. 5.12 in the paper.
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns
+    :param gamma: number of parameters in the strain energy function
+    :return: sigma_function, i.e. a symbolic function sigma(F,p1,...,pn, I1,...,I8ns)
+    """
+    dim = 3
+    axes_to_indices = {"f": 0, "s": 1, "n": 2}  # convert string labelling of axes to indices
+
+    sigma_sym = calculate_sigma_sym_E(psi, num_params)
+
+    # convert the symbolic function to a numpy function to save computation time. Therefore, we need to tell the
+    # lambdify function all the variables in the function
+    symbols_lst = [Eff_sym, Efs_sym, Efn_sym, Esf_sym, Ess_sym, Esn_sym, Enf_sym, Ens_sym, Enn_sym]
+    symbols_lst.extend(p_sym)
+    lam_f_sym = sp.symbols("lam_f_sym", real=True)
+    lam_s_sym = sp.symbols("lam_s_sym", real=True)
+    symbols_lst.append(lam_f_sym)
+    symbols_lst.append(lam_s_sym)
+
+    sigma_function = {}
+    for shear in ['ff', 'ss']:
+        sigma_sym_shear = copy.copy(sigma_sym)
+        ind1 = axes_to_indices[shear[0]]
+        ind2 = axes_to_indices[shear[1]]
+
+        # already put the deformation gradient in the expression because of all the null components this saves
+        # computation time
+        F = sp.Matrix([[lam_f_sym, 0, 0], [0, lam_s_sym, 0], [0, 0, 1 / (lam_f_sym * lam_s_sym)]])
+
+        sigma_sym_shear = sigma_sym_shear.subs(F_sym, F)
+        for i in range(dim):
+            for j in range(dim):
+                sigma_sym_shear = sigma_sym_shear.subs(F_sym[i, j], F[i, j])
+        sigma_sym_shear = sp.simplify(sigma_sym_shear[ind1, ind2])
+
+        # convert to numpy
+        sigma_shear = sp.lambdify(symbols_lst, sigma_sym_shear, modules=[{"Trace": np.trace}, "numpy"])
+        sigma_function[shear] = sigma_shear
+
+    return sigma_function
+
+
+def evaluate_stress_tensor_function_diagonal_E(shear, lam_f, lam_s, p, sigma_function):
+    """
+    Calculates the stress tensor sigma according to eq. 5.12 in the paper.
+    :param shear: type of shear ('fs', 'sf', 'sn', 'ns', 'fn' or 'nf')
+    :param gamma: amount of shear
+    :param p: list containing all parameters of the strain energy function
+    :param psi: strain-energy-function, i.e. a function with parameters I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p
+    :return: sigma_ij, i.e. the matrix element of sigma corresponding to the given type of shear
+    """
+
+    # calculate real deformation gradient and corresponding invariants for the given type of shear with numpy
+    F = np.array([[lam_f, 0, 0], [0, lam_s, 0], [0, 0, 1 / (lam_f * lam_s)]])
+    C = np.dot(F.T, F)
+    E = (C - np.identity(3)) / 2
+
+
+    # evaluate the sigma function with the given parameters
+    sigma_function_comp = sigma_function[shear]
+    sigma = sigma_function_comp(E[0,0], E[0,1], E[0,2], E[1,0], E[1,1], E[1,2], E[2,0], E[2,1], E[2,2], *p, lam_f, lam_s)
+
+    # return the component of the sigma tensor belonging to the given type of shear
+    return float(sigma)

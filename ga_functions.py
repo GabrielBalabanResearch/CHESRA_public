@@ -76,7 +76,7 @@ def run_ga(toolbox):
     else:
         population = pickle.load(open(GA_CONFIG.pop_path, 'rb'))
 
-    if GA_CONFIG.check_duplicates == 1:
+    if GA_CONFIG.check_duplicates is True:
         new_pop_idx = check_duplicates(population)
 
     hof = tools.HallOfFame(GA_CONFIG.hofsize[0]) #set up hall of fame
@@ -96,7 +96,6 @@ def run_ga(toolbox):
     for i in range(0, len(population)):
         gen_sRSS.append(gen_fitnesses[i] - (gen_complex[i] * GA_CONFIG.hyperp))
 
-    print(f'\tAvg fitness is: {np.mean(gen_fitnesses)}')
     print(f'\tBest fitness is {np.min(gen_fitnesses)}')
 
     # Store initial population details for result processing.
@@ -184,7 +183,7 @@ def run_ga(toolbox):
             offspring.extend(hof.items) # add th best back to the population 
                    
         # Check if offspring were dublicated or if hof individials are already in population: if so, create random new individual; if not, keep original ind or hof ind
-        if GA_CONFIG.check_duplicates == 1:
+        if GA_CONFIG.check_duplicates is True:
             new_off_idx = check_duplicates(offspring)
             for idx in new_off_idx:
                 del offspring[idx].fitness.values
@@ -207,7 +206,6 @@ def run_ga(toolbox):
         t = time.localtime()
         current_time = time.strftime("%H:%M:%S", t)
         print(current_time)
-        print(f'\tAvg fitness is: {np.mean(gen_fitnesses)}')
         print(f'\tBest fitness is {np.min(gen_fitnesses)}')
 
         pickle.dump(population, open(GA_CONFIG.save_data_to+'/population.pkl', 'wb'))
@@ -434,7 +432,7 @@ def start_ga(pop_size, max_generations, hofsize, data_lst, hyperparameter, save_
              varis = ['I1', 'I2', 'I3', 'I4f', 'I4s', 'I4n', 'I5f', 'I5s', 'I5n', 'I8fs', 'I8fn', 'I8ns'],
              funcs = ['sp.sqrt', 'pow2', 'sp.exp', 'sp.log', '-'],
              const_symb = ['p'], opts = ['-', '+', '/', '*'],
-             multithread = True, pop_path = 0, max_length = 0, n_cores=0, check_duplicates = 0):
+             multithread = True, pop_path = 0, max_length = 0, n_cores=0, check_duplicates = False):
     """ Function which runs CHESRA.
     Args:
         pop_size: number of individuals in each generation
