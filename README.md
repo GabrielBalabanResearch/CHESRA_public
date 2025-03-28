@@ -8,6 +8,7 @@ datasets of myocardial stress-strain relations as input and evolves a population
 of SEFs according to the fitness function $f_\text{fit}$ (Fig. 1).
 
 ![workflow.png](Figures/workflow.png)
+Fig. 1: Overview of CHESRA
 
 ## Environments
 
