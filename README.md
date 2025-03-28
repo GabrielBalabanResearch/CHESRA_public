@@ -1,8 +1,7 @@
 # Cardiac Hyperelastic Evolutionary Symbolic Regression Algorithm (CHESRA)
 
-To automatically derive cardiac strain energy functions (SEFs) from experimental data, we developed CHESRA 
-(Cardiac Hyperelastic Evolutionary Symbolic Regression Algorithm). 
-CHESRA is an evolutionary framework that manipulates symbolic representations of cardiac SEFs to fit experimental 
+CHESRA was developed to automatically derive cardiac strain energy functions (SEFs) from experimental data. 
+It is an evolutionary framework that manipulates symbolic representations of cardiac SEFs to fit experimental 
 observations while minimizing SEF complexity. CHESRA takes one or more experimental 
 datasets of myocardial stress-strain relations as input and evolves a population 
 of SEFs according to the fitness function $f_\text{fit}$ (Fig. 1).

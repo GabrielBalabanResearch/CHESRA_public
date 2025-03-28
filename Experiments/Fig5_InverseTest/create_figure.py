@@ -57,8 +57,8 @@ for funcname in psi_names:
     model_sheardata_sommer_df.append(shear_fit_func_sommer)
 model_sheardata_sommer_df = pd.concat(model_sheardata_sommer_df)
 
-dokos_shear_experiment_df = pd.read_csv("../../Data/dokos/dokos_shear_experiment.csv")
-sommer_shear_experiment_df = pd.read_csv("../../Data/sommer/sommer_shear_experiment.csv")
+dokos_shear_experiment_df = pd.read_csv("../../CHESRA/data/dokos/dokos_shear_experiment.csv")
+sommer_shear_experiment_df = pd.read_csv("../../CHESRA/data/sommer/sommer_shear_experiment.csv")
 
 # Font sizes
 fs = 18
