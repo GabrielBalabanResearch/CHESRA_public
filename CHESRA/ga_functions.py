@@ -6,7 +6,7 @@ import pickle
 from deap import base, creator, tools
 import time
 from multiprocessing import Pool
-from function_tree import create_function, compute_function, mutation_alter, cross_over, count_preops, count_consts, \
+from CHESRA.function_tree import create_function, compute_function, mutation_alter, cross_over, count_preops, count_consts, \
     find_root, mutation_reduce, mutation_extend
 
 

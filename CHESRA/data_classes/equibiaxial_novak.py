@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import csv
 from scipy import optimize
 from lmfit import minimize, Parameters, report_fit
-from continuum_mechanics import *
+from CHESRA.continuum_mechanics import *
 import time
 import pandas as pd
 
@@ -40,7 +40,7 @@ class EquibiaxialNovak:
         :param shear: type of shear, i.e. 'ff' or 'ss'
         :return: amount of stretch lambda and stress sigma as a list
         """
-        filename = 'Data/novak/'
+        filename = 'CHESRA/data/novak/'
         name = loc + '_' + shear
         lam_data = []
         sigma_data = []
@@ -264,9 +264,6 @@ class EquibiaxialNovak:
                 df.to_csv(save_to + 'data_equibiax_novak.csv')
 
 
-
-            COD = SSE_fit_all / np.sum((np.array(Y_a) - np.mean(Y_a)) ** 2)
-
         except Exception as e:
 
             if plot is True:
@@ -275,6 +272,7 @@ class EquibiaxialNovak:
             Y_a = [1]
             res = [1]
             nfev = np.inf
+            p_best_dict = {}
 
         return SSE_fit_all, Y_a, res, nfev, p_best_dict
 

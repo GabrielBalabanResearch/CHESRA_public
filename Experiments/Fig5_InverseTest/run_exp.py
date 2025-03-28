@@ -1,23 +1,16 @@
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('TkAgg')
 import pandas as pd
 import sys
 import sympy as sp
 import numpy as np
 import os
-from plot_utils import dataset_colors, latex_emph, dataset_annotate, plot_sheardata, funcname_annotate
-
-plt.rc('text', usetex=True)
-plt.rcParams['font.family'] = 'serif'
-plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+from pyDOE import lhs
 
 p = '../../'
 data_path = '../../'
 sys.path.insert(0, p)
-from data_classes.shear_sommer import ShearSommer
-from data_classes.shear_dokos import ShearDokos
-from pyDOE import lhs
+from CHESRA.data_classes.shear_sommer import ShearSommer
+from CHESRA.data_classes.shear_dokos import ShearDokos
+
 
 
 ########################################################################################################################
@@ -142,7 +135,7 @@ for d, data in enumerate(data_lst):
             var = 'E'
 
         # define the initial parameter sets for the optimization
-        num_samples = 100
+        num_samples = 3 #100
         lhs_samples = lhs(p, samples=num_samples)
         param_ranges = (0, 100)
         initial_points = []

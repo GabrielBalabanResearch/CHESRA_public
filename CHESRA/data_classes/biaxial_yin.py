@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import csv
 from scipy import optimize
 from lmfit import minimize, Parameters, report_fit
-from continuum_mechanics import *
+from CHESRA.continuum_mechanics import *
 import time
 import pandas as pd
 
@@ -38,7 +38,7 @@ class BiaxialYin:
         :param shear: type of shear, i.e. 'ns', 'nf', 'sn', 'sf', 'fn' or 'fs'
         :return: amount of shear gamma and shear stress sigma as a list
         """
-        filename = 'Data/yin/holzapfel_ogden_8'
+        filename = 'CHESRA/data/yin/holzapfel_ogden_8'
         if shear == 'ff':
             name = 'a'
         elif shear == 'ss':
@@ -263,6 +263,7 @@ class BiaxialYin:
             Y_a = [1]
             res = [1]
             nfev = np.inf
+            p_best = [1] * num_params
 
         return SSE_fit, Y_a, res, nfev, p_best
 

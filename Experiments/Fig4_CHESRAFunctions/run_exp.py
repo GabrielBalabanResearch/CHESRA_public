@@ -9,13 +9,13 @@ import sys
 
 p = '../../'
 sys.path.insert(0, p)
-from ga_functions import run_function, start_ga
-from data_classes.shear_sommer import ShearSommer
-from data_classes.biaxial_sommer import BiaxialSommer
-from data_classes.biaxial_yin import BiaxialYin
-from data_classes.shear_dokos import ShearDokos
-from data_classes.equibiaxial_novak import EquibiaxialNovak
-from data_classes.biaxial_novak import BiaxialNovak
+from CHESRA.ga_functions import run_function, start_ga
+from CHESRA.data_classes.shear_sommer import ShearSommer
+from CHESRA.data_classes.biaxial_sommer import BiaxialSommer
+from CHESRA.data_classes.biaxial_yin import BiaxialYin
+from CHESRA.data_classes.shear_dokos import ShearDokos
+from CHESRA.data_classes.equibiaxial_novak import EquibiaxialNovak
+from CHESRA.data_classes.biaxial_novak import BiaxialNovak
 
 
 # Define a function to parse command-line arguments
@@ -88,6 +88,7 @@ if __name__ == '__main__':
     ind = [[ps]]
     num_params = len(list(dict.fromkeys(re.findall('p[0-9]+', ps)))) + 1
     print('Final CHESRA result:')
+    print(ps)
     print('\tBest function is psi = %s' % sp.simplify(ps))
     print('\tBest fitness is %.1E' % error[lab].tolist()[es])
 

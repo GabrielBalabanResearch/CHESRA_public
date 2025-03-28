@@ -1,119 +1,28 @@
 from matplotlib import pyplot as plt
-
-from matplotlib.lines import Line2D
-import matplotlib.patches as mpatches
-import os
-import sys
-import seaborn as sns
 import pandas as pd
-import numpy as np
+import sys
 import matplotlib
 matplotlib.use('TkAgg')
 
-from plot_utils import dataset_colors, latex_emph, dataset_annotate, plot_sheardata
+p = '../../'
+sys.path.insert(0, p)
+from CHESRA.plot_utils import dataset_colors, dataset_annotate, plot_sheardata, plot_biaxial_data, add_legend_biaxial, \
+    dokos_shear_annotate_curves, sommer_shear_annotate_curves
 
 plt.rc('text', usetex=True)
 plt.rcParams['font.family'] = 'serif'
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-name = 'CH3'
-
-def add_legend_biaxial(ax, marker_dict, marker_var, color, markersize=7, ncol=2, bbox=(-0.15, 1.05)):
-    #     data_legend_marks = [Line2D([0], [0],
-    #                          #marker = "none",
-    #                          linestyle = 'None',
-    #                          label = marker_var)] +\
-    data_legend_marks = [Line2D([0], [0],
-                                color=color,
-                                marker=marker_dict[mval],
-                                linestyle='none',
-                                markerfacecolor='none',
-                                markersize=markersize,
-                                label=mval) for mval in marker_dict.keys()]
-
-    legend = ax.legend(loc="upper left",
-                       handles=data_legend_marks,
-                       #               fancybox=True,
-                       #               shadow=True,
-                       borderpad=0.1,
-                       handletextpad=0.0,
-                       ncols=ncol,
-                       bbox_to_anchor=bbox,
-                       columnspacing=0,
-                       frameon=False,
-                       labelspacing=0, title=marker_var)
-    legend._legend_box.align = "center"
-
-
-#     frame = legend.get_frame()
-#     frame.set_edgecolor('black')
-
-
-def plot_biaxial_data(axs, dataset_name, marker_dict, marker_var, model_df, experiment_df, markersize=7, x_ax_offset=0):
-    for i_strain, strain in enumerate(["ff", "ss"]):
-        experiment_protocol_df = experiment_df.query("strain == '{}'".format(strain))
-        # experiment_protocol_df[marker_var] = experiment_protocol_df[marker_var].astype(str)
-        for marker_varval in experiment_protocol_df[marker_var].unique():
-            querystr = "{} == '{}'".format(marker_var, marker_varval)
-            # print(querystr)
-            xy_experiment_df = experiment_protocol_df.query(querystr)
-
-            i_x = i_strain + x_ax_offset
-            axs[i_x].plot(xy_experiment_df["x"],
-                          xy_experiment_df["y"],
-                          marker=marker_dict[marker_varval],
-                          markersize=markersize,
-                          markerfacecolor="none",
-                          color=dataset_colors[dataset_name],
-                          linestyle='None', zorder=10)
-
-            y_string = "{}, {}".format(strain, marker_varval)
-            x_cutoff = model_df["x"] <= 1.02 * xy_experiment_df["x"].max()
-            y_cutoff = model_df[y_string] <= 1.2 * xy_experiment_df["y"].max()
-
-            model_cutoff_df = model_df[np.logical_and(x_cutoff, y_cutoff)]
-
-            axs[i_x].plot(model_cutoff_df["x"],
-                          model_cutoff_df[y_string],
-                          color="k", zorder=20)
-
-
-def dokos_shear_annotate_curves(axs, dokos_shear_experiment_df, pad=0.5):
-    # Annotations
-    for ax in axs:
-        for mode in ["fs", "fn", "sf"]:
-            expr_modedata_df = dokos_shear_experiment_df.query("mode == '{}'".format(mode))
-            if mode == 'fs':
-                ax.annotate("(" + mode + ")", (0.52, expr_modedata_df["y"].max() - pad))
-            elif mode == 'sf':
-                ax.annotate("(" + mode + ")", (0.52, expr_modedata_df["y"].max() + 2 * pad))
-            else:
-                ax.annotate("(" + mode + ")", (0.52, expr_modedata_df["y"].max()))
-
-        ax.annotate("(sn)", (0.52, dokos_shear_experiment_df.query("mode == 'sn'")["y"].max() + 1.5 * pad))
-        ax.annotate("(ns, nf)", (0.52, dokos_shear_experiment_df.query("mode == 'ns'")["y"].max() - 1.5 * pad))
-
-
-def sommer_shear_annotate_curves(axs, sommer_shear_experiment_df, pad=0.2):
-    # Annotations
-    for ax in axs:
-        # for mode in ["fs", "fn"]:
-        #    expr_modedata_df = sommer_shear_experiment_df.query("mode == '{}'".format(mode))
-        ax.annotate("(fs)", (0.52, sommer_shear_experiment_df.query("mode == 'fs'")["y"].max() + 0.5 * pad))
-        ax.annotate("(fn)", (0.52, sommer_shear_experiment_df.query("mode == 'fn'")["y"].max() - pad))
-
-        ax.annotate("(ns, nf)", (0.52, sommer_shear_experiment_df.query("mode == 'ns'")["y"].max() - pad))
-        ax.annotate("(sf, sn)", (0.52, sommer_shear_experiment_df.query("mode == 'sn'")["y"].max() + pad))
 
 yin_biaxial_model_df = pd.read_csv("plot_data/data_biaxial_yin.csv").drop(columns = "Unnamed: 0")
-yin_biaxial_experiment_df = pd.read_csv("../../Data/yin/yin_biaxial_experiment.csv")
+yin_biaxial_experiment_df = pd.read_csv("../../CHESRA/data/yin/yin_biaxial_experiment.csv")
 yin_biaxial_experiment_df["r"] = yin_biaxial_experiment_df[["r"]].applymap(lambda x: '{0:.2f}'.format(x))
 data_markers_yin_biaxial = {"2.05": "^",
                             "1.02": "s",
                             "0.48": "o"}
 
 sommer_biaxial_model_df = pd.read_csv("plot_data/data_biaxial_sommer.csv").drop(columns = "Unnamed: 0")
-sommer_biaxial_experiment_df = pd.read_csv("../../Data/sommer/sommer_biaxial_experiment.csv")
+sommer_biaxial_experiment_df = pd.read_csv("../../CHESRA/data/sommer/sommer_biaxial_experiment.csv")
 sommer_biaxial_experiment_df["r"] = sommer_biaxial_experiment_df[["r"]].applymap(lambda x: '{0:.2f}'.format(x))
 
 data_markers_sommer_biaxial = {"0.50": "o",
@@ -123,15 +32,13 @@ data_markers_sommer_biaxial = {"0.50": "o",
                                "2.00": "^"}
 
 dokos_shear_model_df = pd.read_csv("plot_data/data_shear_dokos.csv").drop(columns = "Unnamed: 0")
-dokos_shear_experiment_df = pd.read_csv("../../Data/dokos/dokos_shear_experiment.csv")
+dokos_shear_experiment_df = pd.read_csv("../../CHESRA/data/dokos/dokos_shear_experiment.csv")
 
 sommer_shear_model_df = pd.read_csv("plot_data/data_shear_sommer.csv").drop(columns = "Unnamed: 0")
-sommer_shear_experiment_df = pd.read_csv("../../Data/sommer/sommer_shear_experiment.csv")
+sommer_shear_experiment_df = pd.read_csv("../../CHESRA/data/sommer/sommer_shear_experiment.csv")
 
 novak_biaxial_model_df = pd.read_csv("plot_data/data_biaxial_novak.csv").drop(columns = "Unnamed: 0")
-novak_biaxial_experiment_df = pd.read_csv("../../Data/novak/novak_biaxial_experiment.csv")
-
-print(novak_biaxial_model_df)
+novak_biaxial_experiment_df = pd.read_csv("../../CHESRA/data/novak/novak_biaxial_experiment.csv")
 novak_biaxial_experiment_df["protocol_otherextension"] = novak_biaxial_experiment_df[["protocol_otherextension"]].applymap(lambda x: '{0:.2f}'.format(x))
 
 data_markers_novak_biaxial = {"1.20": "o",
@@ -140,7 +47,7 @@ data_markers_novak_biaxial = {"1.20": "o",
 
 novak_equibiaxial_model1_df = pd.read_csv("plot_data/data_equibiax_novak1.csv")
 novak_equibiaxial_model2_df = pd.read_csv("plot_data/data_equibiax_novak2.csv")
-novak_equibiaxial_experiment_df = pd.read_csv("../../Data/novak/novak_equibiaxial_experiment.csv")
+novak_equibiaxial_experiment_df = pd.read_csv("../../CHESRA/data/novak/novak_equibiaxial_experiment.csv")
 
 data_markers_novak_equibiaxial = {"septum": "o",
                                   "sub-epi": "s",
@@ -340,27 +247,27 @@ novak_equibiaxial_axs[2].annotate(r"\textbf{specimen 2}",
 add_legend_biaxial(yin_biaxial_axs[0], 
                    data_markers_yin_biaxial,
                    r"\textbf{ratio}", 
-                   dataset_colors["Yin Biaxial"], ncol=1, bbox=(-0.12, 1.03))
+                   dataset_colors["Yin Biaxial"], bbox=(-0.12, 1.03))
 
 add_legend_biaxial(sommer_biaxial_axs[0], 
                    data_markers_sommer_biaxial, 
                    r"\textbf{ratio}", 
-                   dataset_colors["Sommer Biaxial"], ncol=1, bbox=(-0.12, 1.03))
+                   dataset_colors["Sommer Biaxial"], bbox=(-0.12, 1.03))
 
 add_legend_biaxial(novak_biaxial_axs[0], 
                    {"1.15": data_markers_novak_biaxial["1.15"]}, 
                    r"$\boldsymbol{\lambda_{s}}$", 
-                   dataset_colors["Novak Biaxial"], ncol=1, bbox=(-0.12, 1.02))
+                   dataset_colors["Novak Biaxial"], bbox=(-0.12, 1.02))
 
 add_legend_biaxial(novak_biaxial_axs[1], 
                    data_markers_novak_biaxial, 
                    r"$\boldsymbol{\lambda_{f}}$", 
-                   dataset_colors["Novak Biaxial"], ncol=1, bbox=(-0.12, 1.03))
+                   dataset_colors["Novak Biaxial"], bbox=(-0.12, 1.03))
 
 add_legend_biaxial(novak_equibiaxial_axs[1],
                    data_markers_novak_equibiaxial,
                    r"\textbf{location}",
-                   dataset_colors["Novak Equibiaxial"], ncol=1, bbox=(-0.07,1.02))
+                   dataset_colors["Novak Equibiaxial"], bbox=(-0.07,1.02))
 
 
 

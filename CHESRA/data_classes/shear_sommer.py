@@ -4,22 +4,21 @@ from lmfit import minimize, Parameters
 import numpy as np
 import pandas as pd
 import sympy as sp
-from continuum_mechanics import calculate_stress_tensor_function, evaluate_stress_tensor_function, \
+from CHESRA.continuum_mechanics import calculate_stress_tensor_function, evaluate_stress_tensor_function, \
     calculate_stress_tensor_function_E, evaluate_stress_tensor_function_E
 
 
-class ShearDokos:
+class ShearSommer:
     def __init__(self):
         self.exp_type = 'shear'
 
-    def get_data(self, shear, path):
+    def get_data(self, shear, path, filename='CHESRA/data/sommer/sommer'):
         """
         Extracts the experimental data in figure 7 for the given shear type.
         :param shear: type of shear, i.e. 'ns', 'nf', 'sn', 'sf', 'fn' or 'fs'
-        :param path: path reference to the file 'Data/dokos/holzapfel_ogden_7'
+        :param path: path reference to the data file
         :return: amount of shear gamma and shear stress sigma as a list
         """
-        filename = 'Data/dokos/holzapfel_ogden_7'
         gamma_data = []
         sigma_data = []
         with open(path + filename + '_%s.csv' % shear) as csvfile:
@@ -51,15 +50,14 @@ class ShearDokos:
         elif var == 'E':
             return evaluate_stress_tensor_function_E(shear, gamma, p, sigma_function)
 
-
     def add_parameters(self, fit_params, num_params, i, init_vals, not_vary=[]):
         """
         Adds a parameter to the optimization parameter list for every parameter in the strain energy function and for every shear dataset i
         :param fit_params: parameters to be optimized (type: lmfit.Parameters())
         :param num_params: number of parameters in the strain energy function
-        :param i: index of shear dataset
         :param init_vals: initial parameter values to be used
         :param not_vary: indices of parameters which should not be optimized
+        :param i: index of shear dataset
         """
         # add a parameter in the list for every parameter in the strain energy function
         for n in range(num_params):
@@ -88,7 +86,7 @@ class ShearDokos:
         """
         resid = []
         i = 0
-        std_fact = 0.3
+        std_fact = 0.30
         # make residual per data set
         for shear in gamma_data_all.keys():
             for j in range(len(sigma_data_all[shear])):
@@ -98,7 +96,7 @@ class ShearDokos:
             i += 1
         return np.array(resid)
 
-    def optimize_psi(self, psi, num_params, path='.', not_vary=[], var='I', shear_lst=['fs', 'fn', 'sf', 'sn', 'nf', 'ns'],
+    def optimize_psi(self, psi, num_params, path='.', not_vary=[], shear_lst=['fs', 'fn', 'sf', 'sn', 'nf', 'ns'], var='I',
                      init_vals=[1]):
         """
         Run the optimization to find the best parameters for the given psi.
@@ -137,6 +135,7 @@ class ShearDokos:
         # run the global fit to all the data sets and measure the time needed
         result = minimize(self.objective, fit_params,
                           args=(gamma_data_all, sigma_function, num_params, sigma_data_all, var))
+
         # print("Needed %.1f s for optimization." % (end_time - start_time))
 
         # return the best parameters (only the first [num_params] corresponding to the first dataset since the other
@@ -148,26 +147,15 @@ class ShearDokos:
         return p_best, SSE, Y_a, result.residual, result.nfev
 
     def fit_data(self, ind, num_params, data_path, not_vary=[], plot=False, save_to='./', fs=18, only_data=False,
-                 with_HO=True, digits=3, init_vals=[1]):
-        """ Takes in a function found by the GA ane performs the following steps: finds the best parameters, calcualtes the stress tensor function,
-            evaluates the stress tensor function at each x-value from a given experiental dataset, and calculates the SSE.
-        Args:
-            ind: An given function found by the GA
-            num_params: number of parameters. This is typically 8.
-            shears: shear types you would like to include in the fit.
-            data_path: data path of the experimental data.
-            plot: would you like to plot this data?
-            save to: where would you like to save this data to?
-        """
-
+                 with_HO=True, digits=3,
+                 init_vals=[1]):
         def psi_eq(I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p):
             """
-            Potnetial strain-energy-function psi.
+            Strain-energy-function psi as defined in eq. 5.38 in the paper.
             :param I_i: invariants
             :param p: list of parameters [p1, p2, ... , pn]
             :return: psi
             """
-
             for par in range(1, num_params):
                 locals()[f"p{par}"] = p[par]
 
@@ -178,47 +166,56 @@ class ShearDokos:
 
         psi = psi_eq
 
-
         try:
-            shears = ['fs', 'fn', 'sf', 'sn', 'nf', 'ns']
+            # define strain energy function to be optimized and number of parameters in the function
+            num_params = num_params  # number of parameters to be optimized, i.e. the length of the parameter list p from psi
 
-            ## do the fit
-            p_best, SSE_fit, Y_a, res, nfev = self.optimize_psi(psi, num_params, not_vary=not_vary, path=data_path,
-                                                                shear_lst=shears, init_vals=init_vals)
+            # define the types of shear for which the function should be fitted (default is all but maybe at the beginning we only want to do one type)
+            shear_lst = ['fs', 'fn', 'sf', 'sn', 'nf', 'ns']  # 'fs', 'fn', 'sf', 'sn', 'nf', 'ns'
+
+            # do the fit
+
+            p_best, SSE_fit, Y_a, residuals, nfev = self.optimize_psi(psi, num_params, data_path, not_vary=not_vary,
+                                                                      shear_lst=shear_lst, init_vals=init_vals)
 
             if plot is True:
 
-                ## calculate the symbolic stress tensor function from psi
+                gamma_lst = np.linspace(0, 0.51, 50)  # gamma values to be plotted
+
+                # calculate the symbolic stress tensor function from psi
                 sigma_function = calculate_stress_tensor_function(psi, num_params)
 
-
-                gamma_lst = np.linspace(0.01, 0.5, 50)
                 data_save = {'x': gamma_lst}
-                for shear in shears:
+                for shear in shear_lst:
                     sigma_lst = []
                     for gamma in gamma_lst:
                         # evaluate sigma for the given shear, gamma and fit parameters
                         sigma_lst.append(evaluate_stress_tensor_function(shear, gamma, p_best, sigma_function))
+
                     data_save[shear] = sigma_lst
 
+
                 df = pd.DataFrame(data=data_save)
-                df.to_csv(save_to + 'data_shear_dokos.csv')
+                df.to_csv(save_to + 'data_shear_sommer.csv')
 
 
         except Exception as e:
+
             if plot is True:
                 print(e)
             SSE_fit = np.inf
             Y_a = [1]
-            res = [1]
+            residuals = [1]
             nfev = np.inf
+            p_best = [1] * num_params
 
-        return SSE_fit, Y_a, res, nfev, p_best
+        return SSE_fit, Y_a, residuals, nfev, p_best
 
-    def fit_psi_to_data(self, psi, num_params, data_path, not_vary=[], plot=False, save_to='./', fs=18, only_data=False,
-                   var='E', init_vals=[1], psi_name=''):
+    def fit_psi_to_data(self, psi, num_params, data_path, not_vary=[], plot=False, save_to='./', fs=18,
+                   only_data=False, var='E', init_vals=[1], psi_name=''):
+
         """ Takes in a given function psi ane performs the following steps: finds the best parameters, calcualtes the stress tensor function,
-            evaluates the stress tensor function at each x-value from a given experiental dataset, and calculates the SSE.
+                    evaluates the stress tensor function at each x-value from a given experiental dataset, and calculates the SSE.
         Args:
             psi: An given function.
             num_params: number of parameters.
@@ -233,36 +230,38 @@ class ShearDokos:
             psi_name: name of the function psi
         """
 
+        # define strain energy function to be optimized and number of parameters in the function
+        num_params = num_params  # number of parameters to be optimized, i.e. the length of the parameter list p from psi
 
-        shears = ['fs', 'fn', 'sf', 'sn', 'nf', 'ns']
+        # define the types of shear for which the function should be fitted (default is all but maybe at the beginning we only want to do one type)
+        shear_lst = ['fs', 'fn', 'sf', 'sn', 'nf', 'ns']  # 'fs', 'fn', 'sf', 'sn', 'nf', 'ns'
 
-        ## do the fit
-        p_best, SSE_fit, Y_a, res, nfev = self.optimize_psi(psi, num_params, not_vary=not_vary, path=data_path, shear_lst=shears, var=var, init_vals=init_vals)
+        # do the fit
+
+        p_best, SSE_fit, Y_a, residuals, nfev = self.optimize_psi(psi, num_params, data_path, not_vary=not_vary,
+                                                                  shear_lst=shear_lst, var=var, init_vals=init_vals)
 
         if plot is True:
+            # define fixed color for each shear type
+            colors = {'fs': 'blueviolet', 'fn': 'royalblue', 'sf': 'cadetblue', 'sn': 'darkkhaki', 'nf': 'orange',
+                      'ns': 'crimson'}
+            markers = {'fs': 'o', 'fn': 's', 'sf': 'd', 'sn': 'p', 'nf': 'v',
+                       'ns': '*'}
 
-            ## calculate the symbolic stress tensor function from psi
+            gamma_lst = np.linspace(0, 0.51, 50)  # gamma values to be plotted
+
+            # calculate the symbolic stress tensor function from psi
             if var == 'I':
                 sigma_function = calculate_stress_tensor_function(psi, num_params)
             else:
                 sigma_function = calculate_stress_tensor_function_E(psi, num_params)
 
-
-            # do the plot
-            colors = {'fs': 'blueviolet', 'fn': 'royalblue', 'sf': 'cadetblue', 'sn': 'darkkhaki', 'nf': 'orange',
-                        'ns': 'crimson'}
-            markers = {'fs': 'o', 'fn': 's', 'sf': 'd', 'sn': 'p', 'nf': 'v',
-                        'ns': '*'}
-
             fig, axs = plt.subplots()
 
-            gamma_lst = np.linspace(0.01, 0.5, 50)
-            data_save = {'x':gamma_lst}
-            for shear in shears:
-                # read in experimental data
-                gamma_data, sigma_data = self.get_data(shear, data_path)
+            data_save = {'x': gamma_lst}
+            for shear in shear_lst:
                 sigma_lst = []
-
+                sigma_lst_paper = []
                 for gamma in gamma_lst:
                     # evaluate sigma for the given shear, gamma and fit parameters
                     if var == 'I':
@@ -272,34 +271,28 @@ class ShearDokos:
 
                 if only_data is False:
                     data_save[shear] = sigma_lst
+                    # plot the results from the function
                     axs.plot(gamma_lst, sigma_lst, color=colors[shear])
-
-                axs.plot(gamma_data, sigma_data, marker=markers[shear], ls='', fillstyle='none', color=colors[shear],
-                        label='(%s)' % shear)
+                    # data_save[shear] = sigma_lst
+                # plot the experimental data
+                gamma_data, sigma_data = self.get_data(shear, path=data_path)
+                axs.plot(gamma_data, sigma_data, marker=markers[shear], ls='', fillstyle='none',
+                         color=colors[shear],
+                         label='(%s)' % shear)
 
             axs.legend(loc="upper left", frameon=False, fontsize=fs, handletextpad=0)
-            axs.set_ylim((-0.1, 16.1))
+            axs.tick_params(axis='both', which='major', labelsize=fs)
+            axs.set_ylim((0, 6))
             axs.set_xlim((0, 0.6))
-            axs.set_yticks([0, 2, 4, 6, 8, 10, 12, 14, 16])
-            # axs.set_yticks([])
-            # axs.set_xticks([])
             axs.spines['right'].set_visible(False)
             axs.spines['top'].set_visible(False)
-            # axs.spines['bottom'].set_visible(False)
-            # axs.spines['left'].set_visible(False)
             axs.set_ylabel("stress $\sigma_{ij}$ [kPa]", fontsize=fs)
             axs.set_xlabel("amount of shear $\gamma$", fontsize=fs)
-            axs.tick_params(axis='both', which='major', labelsize=fs)
-            # lab_e = ' | ga solution: ' + ps
-            # plt.title("error = " + str(round(error[lab].tolist()[es], 2)) + lab_e)
 
             df = pd.DataFrame(data=data_save)
-            df.to_csv(save_to + 'data_shear_dokos_%s.csv' % psi_name)
-            # plt.semilogy()
+            df.to_csv(save_to + 'data_shear_sommer_%s.csv' % psi_name)
             plt.tight_layout()
-            plt.savefig(save_to + 'plot_shear.png', dpi=300, transparent=True)
             # plt.show()
+            fig.savefig(save_to + 'plot_shear_sommer.png', dpi=300)
 
-
-
-        return SSE_fit, Y_a, res, nfev, p_best
+        return SSE_fit, Y_a, residuals, nfev, p_best

@@ -3,10 +3,9 @@ import matplotlib
 matplotlib.use('TkAgg')
 import pandas as pd
 import sys
-import sympy as sp
 import numpy as np
 import os
-from plot_utils import dataset_colors, latex_emph, dataset_annotate, plot_sheardata, funcname_annotate
+
 
 plt.rc('text', usetex=True)
 plt.rcParams['font.family'] = 'serif'
@@ -15,9 +14,7 @@ plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 p = '../../'
 data_path = '../../'
 sys.path.insert(0, p)
-from data_classes.shear_sommer import ShearSommer
-from data_classes.shear_dokos import ShearDokos
-from pyDOE import lhs
+from CHESRA.plot_utils import dataset_colors, latex_emph, dataset_annotate, plot_sheardata, funcname_annotate
 
 
 ########################################################################################################################
@@ -41,7 +38,6 @@ param_names = {'CH1':['$p_{1}$', '$p_{2}$', '$p_{3}$'],
                     '$k_{fs}$', '$k_{nn}$', '$k_{ns}$', '$k_{ss}$'],
              'GL':['$C$', '$b_{f}$', '$b_{t}$', '$b_{fs}$']}
 
-data_lst = [ShearDokos(), ShearSommer()]
 data_names = ['Shear Dokos', 'Shear Sommer']
 
 fitplot_all_figure = plt.figure(figsize=(16, 18), constrained_layout=False)
