@@ -1,0 +1,48 @@
+elasticity_estimation:
+  displacement_db: ""
+  lower_bound: ""
+  method: TNC
+  optimization_tol: 1.0e-06
+  printlosses: true
+energy_function: chesra1
+load_checkpoint: ''
+material_parameters: ""
+mechdata: ""
+mesh:
+  dbpath_fibre: e_fibre
+  dbpath_sheet: e_sheet
+  facet_markers:
+    LV_endo: 30
+    RV_endo: 20
+    base: 10
+    epi: 40
+  mesh_markers:
+    LV: 0
+    RV: 2
+    septum: 1
+  microstructure: ""
+  path: ""
+numerics:
+  FEM_degree: 1
+  base_spring_k: 100
+  compress_penalty: 100
+  nonlinear_solver_params:
+    nonlinear_solver: snes
+    snes_solver:
+      absolute_tolerance: 0.0001
+      linear_solver: mumps
+      lu_solver:
+        symmetric: true
+      maximum_iterations: 60
+      method: newtontr
+      report: true
+      solution_tolerance: 0.0001
+output:
+  files:
+    logfile: ""
+    path: ""
+    timestamp: true
+  screen:
+    PV_incrementer: true
+    continuity_solver: true
+    dolfin_log_level: 50
