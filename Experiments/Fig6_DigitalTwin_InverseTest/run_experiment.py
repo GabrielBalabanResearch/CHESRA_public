@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import yaml
 import pandas as pd
+import dolfin as df
 
 from simulation.elasticity_estimation import estimate_elasticity_displacementloss
 from simulation.helpers import set_ffc_params, pretty_print_dict
@@ -13,6 +14,8 @@ DISP_NOISE = 0.5
 
 def main(energy_function):
     set_ffc_params()
+    df.set_log_level(40)
+
     experiment_params = yaml.load(open("experiment_params.yaml", "r"), Loader = yaml.SafeLoader)
     simulation_params = yaml.load(open("simulation/simulation_config.yaml", "r"), Loader = yaml.SafeLoader)
     lhs_sample = pd.DataFrame(experiment_params["latin_hypercube_samples"][energy_function])

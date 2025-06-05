@@ -35,7 +35,7 @@ numerics:
         symmetric: true
       maximum_iterations: 60
       method: newtontr
-      report: true
+      report: false
       solution_tolerance: 0.0001
 output:
   files:
