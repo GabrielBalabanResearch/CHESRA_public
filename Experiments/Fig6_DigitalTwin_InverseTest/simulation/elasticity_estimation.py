@@ -32,10 +32,10 @@ class DisplacementSquareLoss(object):
         self.printlosses = printlosses
         
     def __call__(self, matparamvals):
-        self.mechsolver.matparams.values.assign(df.Constant(matparamvals))
-        
         self.mechsolver = self.mechsolver.reinit()
         
+        self.mechsolver.matparams.values.assign(df.Constant(matparamvals))
+                
         df.MPI.comm_world.Barrier()  # Ensure all processes reach this point before proceeding
     
         if self.printlosses:
