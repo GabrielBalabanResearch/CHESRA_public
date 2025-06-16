@@ -48,18 +48,33 @@ of parameter variability in 3-D digital twins.
 
 >`cd Experiments/Fig4_CHESRAFunctions`
 > 
->`python ./run_exp.py`
+>`python3 ./run_exp.py`
 > 
-> `python ./create_figure.py`
+> `python3 ./create_figure.py`
 > 
 **Note:** use the default options to reproduce the results in the paper. Otherwise, all parameters can be adjusted. See
 
->`python ./run_exp.py --help`
+>`python3 ./run_exp.py --help`
 
 
-2. Assess parameter variability when fitting to tissue data
->`cd Experiments/Fig5_InverseTest`
+2. Parameter variability benchmark using tissue data
+>`cd Experiments/Fig5_Tissue_Benchmark`
 > 
->`python ./run_exp.py`
+>`python3 ./run_exp.py`
 > 
-> `python ./create_figure.py`
+> `python3 ./create_figure.py`
+
+3. Parameter variability benchmark using a 3D digital twin
+
+>`cd Experiments/Fig6_DigitalTwin_Benchmark`
+> 
+>`python3 run_experiment.py -energy_function chesra1`
+> 
+>`python3 run_experiment.py -energy_function chesra2`
+> 
+>`python3 run_experiment.py -energy_function holzapfel-ogden`
+> 
+>`python3 run_experiment.py -energy_function martonova3`
+> 
+> (Plotting code to be added soon)
+
