@@ -24,8 +24,8 @@ mesh:
   path: ""
 numerics:
   FEM_degree: 1
-  base_spring_k: 100
-  compress_penalty: 100
+  base_spring_k: 10
+  compress_penalty: 10
   nonlinear_solver_params:
     nonlinear_solver: snes
     snes_solver:
@@ -34,7 +34,7 @@ numerics:
       lu_solver:
         symmetric: true
       maximum_iterations: 60
-      method: newtontr
+      method: newtonls
       report: false
       solution_tolerance: 0.0001
 output:
@@ -43,6 +43,6 @@ output:
     path: ""
     timestamp: true
   screen:
-    PV_incrementer: true
-    continuity_solver: true
+    PV_incrementer: false
+    continuity_solver: false
     dolfin_log_level: 50

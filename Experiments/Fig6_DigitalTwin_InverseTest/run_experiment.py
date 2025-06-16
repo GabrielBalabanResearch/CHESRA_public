@@ -23,7 +23,7 @@ def main(energy_function):
     for i, lhs_params in lhs_sample.iterrows():
         simulation_params["material_parameters"] = dict(lhs_params) 
         simulation_params["mesh"]["path"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo.hdf5"
-        simulation_params["mesh"]["microstructure"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo_microstructure.hdf5"
+        simulation_params["mesh"]["microstructure"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo_microstructure.h5"
         simulation_params["mechdata"] = f"synthetic_targetdata/pressure_traces.csv"
         simulation_params["output"]["files"]["path"] = f"results/{energy_function}/{i}"
         simulation_params["output"]["files"]["logfile"] = f"results/{energy_function}/parameter_estimation.log"
@@ -33,6 +33,7 @@ def main(energy_function):
         
         pretty_print_dict(simulation_params)
         estimate_elasticity_displacementloss(simulation_params)
+        exit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
