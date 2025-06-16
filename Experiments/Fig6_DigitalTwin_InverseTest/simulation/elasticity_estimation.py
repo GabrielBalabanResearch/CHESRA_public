@@ -55,12 +55,11 @@ class DisplacementSquareLoss(object):
         for t in times:
             disp_target, mechdata = self.dataloader(float(t))
             self.mechsolver.continuity_solve(float(mechdata["lv pressure (kPa)"].iloc[0]),
-									         float(mechdata["rv pressure (kPa)"].iloc[0]),
-                                             0)
+									         float(mechdata["rv pressure (kPa)"].iloc[0]))
             
             loss_t_func = (disp_target - self.mechsolver.d)**2*df.dx
             
-            mechconstants = [self.mechsolver.p_lv, self.mechsolver.p_rv, self.mechsolver.contraction]
+            mechconstants = [self.mechsolver.p_lv, self.mechsolver.p_rv]
             self.adjcalc.addsolve(self.mechsolver.d, loss_t_func, constants = mechconstants)
 
             loss_t = df.assemble(loss_t_func)
