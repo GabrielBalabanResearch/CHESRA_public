@@ -55,14 +55,27 @@ def normalize_vectorfunction(v):
 	v.vector().apply("insert")
 	return v
 
+"""
 def pretty_print_dict(d, indent=0):
-    """Recursively print a dictionary in a hierarchical format with leaf nodes on the same line."""
+    Recursively print a dictionary in a hierarchical format with leaf nodes on the same line.
     for key, value in d.items():
         if isinstance(value, dict):
             print(" " * indent + str(key) + ":")
             pretty_print_dict(value, indent + 4)
         else:
             print(" " * indent + f"{key}: {value}")
+"""
+
+def pretty_print_dict(d, indent=0):
+    """Recursively format a dictionary in a hierarchical format with leaf nodes on the same line."""
+    result = ""
+    for key, value in d.items():
+        if isinstance(value, dict):
+            result += " " * indent + str(key) + ":\n"
+            result += pretty_print_dict(value, indent + 4)
+        else:
+            result += " " * indent + f"{key}: {value}\n"
+    return result
 
 class SolutionLoader(object):
 	"""
