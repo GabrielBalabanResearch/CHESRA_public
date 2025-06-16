@@ -1,4 +1,4 @@
-from simpleheart.helpers import gather
+from .helpers import gather
 import dolfin as df
 import yaml
 

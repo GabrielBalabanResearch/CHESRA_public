@@ -38,7 +38,6 @@ def main(energy_function):
         simpleheartlogger.log(pretty_print_dict(simulation_params))
         
         estimate_elasticity_displacementloss(simulation_params)
-        exit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

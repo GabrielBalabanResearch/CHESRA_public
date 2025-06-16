@@ -1,9 +1,8 @@
 import dolfin as df 
 import os
 import numpy as np
-from matplotlib import pyplot as plt
-from simpleheart.helpers import *
-from simpleheart.energy_functions import make_energy_function, ActiveHaoEnergy, MaterialParameters
+from .helpers import *
+from .energy_functions import make_energy_function, MaterialParameters
 from ufl_legacy.algorithms.compute_form_data import estimate_total_polynomial_degree
 
 class MicroStructure():

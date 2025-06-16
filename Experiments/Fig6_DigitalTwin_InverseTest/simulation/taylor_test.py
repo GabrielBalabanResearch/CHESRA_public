@@ -1,8 +1,7 @@
-#from mpi_utils import mpi_print 
 import math
 import numpy as np
 import dolfin as df
-from simpleheart.helpers import mpi_print
+from .helpers import mpi_print
 
 def taylor_test_adjoints(evaluator, m_arr, eps_arrays):
 	

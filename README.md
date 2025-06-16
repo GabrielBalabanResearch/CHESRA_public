@@ -30,6 +30,11 @@ Fig. 1: Overview of CHESRA
 >seaborn = 0.13.2
 > 
 >sympy = 1.10.1
+>
+>dolfin = 2019.2.0.dev0
+>
+>yaml = 6.0.2
+
 
 ## Examples
 

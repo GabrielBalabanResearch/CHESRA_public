@@ -3,9 +3,7 @@ import dolfin as df
 import pandas as pd
 import numpy as np
 import yaml
-import datetime
 import warnings
-from matplotlib import pyplot as plt
 
 #Dolfin optimizations for speed
 def set_ffc_params():
@@ -21,7 +19,7 @@ def set_ffc_params():
 	df.parameters["form_compiler"]["cpp_optimize_flags"] = " ".join(flags)
 	warnings.filterwarnings("ignore", category=UserWarning, message=".*quadrature representation is deprecated.*")
 
-def cross_vectorfunctions(v1, v2):
+def cross_vectorfunctions(v1, v2, V_fibre):
 	"""
 	Normalizes a vector function to have unit length.
 	"""
@@ -36,7 +34,7 @@ def cross_vectorfunctions(v1, v2):
 
 	v_cross_values = np.cross(v1_values_reshaped, v2_values_reshaped)
 	
-	v_cross = df.Function(v1.function_space())
+	v_cross = df.Function(V_fibre)
 	v_cross.vector().set_local(v_cross_values.flatten())
 	v_cross.vector().apply("insert")
 	return v_cross

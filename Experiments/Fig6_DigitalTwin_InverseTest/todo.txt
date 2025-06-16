@@ -1,8 +1,0 @@
-Remaining open items
-
-When I get access to the HPC again I need to get the following:
-    1) synthetic target data files for all three elastic energy models
-
-    "disps_est_contraction_noise_0.5.hdf5"
-
-    2) latin hypercube sample points and lower bounds for the Holzapfel-Ogden model
