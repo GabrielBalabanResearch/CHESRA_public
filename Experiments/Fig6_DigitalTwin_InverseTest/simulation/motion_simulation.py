@@ -187,18 +187,11 @@ class MechanicsSolver():
 		#LV-RV pressure variables 
 		self.p_lv = df.Constant(0.0, name = "lv pressure")
 		self.p_rv = df.Constant(0.0, name = "rv pressure")
-		
-		#To make spatial variation in contractions
-		#change this to be df.Function(V, name = "Contraction")
-		self.contraction = df.Constant(0.0, name = "Contraction")
 
 		self.d, self.Dpi, self.DDpi, self.Vol_lv, self.Vol_rv, self.matparams = self.get_variational_forms()
 
 		#No long axis (x-direction ) movement at base
 		#Spring condition along short axes at base
-		#Here you can put in your own data to enhance the realism
-		#Google "dolfin time dependant BC"
-
 		self.dirichlet_BC = df.DirichletBC(self.d.function_space().sub(0), 
 										   0,
 										   self.bivgeo.facet_markers,
@@ -229,29 +222,10 @@ class MechanicsSolver():
 			e_n = cross_vectorfunctions(e_f, e_s, self.bivgeo.microstructure.V_fibre)
 
 		N = df.FacetNormal(self.bivgeo.mesh)
-
-		#Cbar = J**(-2.0/3.0)*F.T*F
-		#matparams = MaterialParameters(self.bivgeo.mesh, 
-		#							   self.simpleheart_config["material_parameters"].keys(),
-		#							   [float(mp) for mp in self.simpleheart_config["material_parameters"].values()])
-
-		#matparams = matparams.to_dict()
-		
-		#matparams["gamma"] = self.contraction
-		#efunc = ActiveHaoEnergy(Cbar, e_f, e_s, matparams)
-		#pi_int = efunc.energy()
-
-		#######################################################################################
-		#From Definition of active strain tensor
-		# Eq 8 High-resolution data assimilation of cardiac mechanics applied to a dyssynchronous ventricle
-		# Balaban 2016
-		mgamma = 1 - self.contraction
-		Fa = mgamma*df.outer(e_f,e_f) + (1/df.sqrt(mgamma))*(df.Identity(3) - df.outer(e_f, e_f))
-		Fe = F*df.inv(Fa)
-		Ce = J**(-2.0/3.0)*Fe.T*Fe
+		C = J**(-2.0/3.0)*F.T*F
 		
 		efunc, matparams = make_energy_function(self.bivgeo.mesh, 
-										  		 Ce,
+										  		 C,
 												 e_f,
 												 e_s,
 												 e_n,
@@ -297,13 +271,12 @@ class MechanicsSolver():
 	def _scaled_exponential(self, a, b, argument):
 		return (a/(2.0*b))*(df.exp(b*argument) - 1)
 
-	def minimize_energy(self, p_lv, p_rv, contraction):
+	def minimize_energy(self, p_lv, p_rv):
 		"""
 		When Dpi = 0 the mechanical energy is minimized
 		"""
 		self.p_lv.assign(p_lv)
 		self.p_rv.assign(p_rv)
-		self.contraction.assign(contraction)
 		#self.d.vector()[:] = 0.0
 		df.solve(self.Dpi == 0,
 				 self.d,
@@ -314,10 +287,8 @@ class MechanicsSolver():
 	def continuity_solve(self, 
 						 p_lv_next,
 						 p_rv_next,
-						 contraction_next, 
 						 p_lv_inc = 0.05,
-						 p_rv_inc = 0.05,
-						 contract_inc = 0.01):
+						 p_rv_inc = 0.05):
 		"""
 		Breaks up a change in contraction and pressure into small steps.
 		Reduces step size in the case of nonlinear solver nonconvergence.
@@ -327,101 +298,41 @@ class MechanicsSolver():
 		report = self.simpleheart_config["output"]["screen"]["continuity_solver"]
 		
 		if report:
-			simpleheartlogger.log("Continuity solve lvp = {:.2f} rvp = {:.2f} contract = {:.3f}".format(p_lv_next, p_rv_next, contraction_next))
-		if (np.array([p_lv_inc, p_rv_inc, contract_inc]) < 1.e-12).any():
+			simpleheartlogger.log("Continuity solve lvp = {:.2f} rvp = {:.2f}".format(p_lv_next, p_rv_next))
+		if (np.array([p_lv_inc, p_rv_inc]) < 1.e-12).any():
 			raise Exception("Continuity solver failed. Pressure-contraction increment too small.")
 
 		steps_plv = np.ceil(np.abs(p_lv_next - float(self.p_lv))/p_lv_inc)
 		steps_prv = np.ceil(np.abs(p_rv_next - float(self.p_rv))/p_rv_inc)
-		steps_contract = np.ceil(np.abs(contraction_next - float(self.contraction))/contract_inc)
 
-		num_steps = int(np.max([steps_plv, steps_prv, steps_contract]))
+		num_steps = int(np.max([steps_plv, steps_prv]))
 
 		p_lv_levels = np.linspace(float(self.p_lv), p_lv_next, num_steps)[1:]
 		p_rv_levels = np.linspace(float(self.p_rv), p_rv_next, num_steps)[1:]
-		contract_levels = np.linspace(float(self.contraction), contraction_next, num_steps)[1:]
 
-		for p_lv, p_rv, contract in zip(p_lv_levels, p_rv_levels, contract_levels):
+		for p_lv, p_rv in zip(p_lv_levels, p_rv_levels):
 			simpleheartlogger.increase_tab()
 			if report:
-				simpleheartlogger.log("Increment lvp = {:.2f} rvp = {:.2f} contract = {:.3f}".format(p_lv, p_rv, contract))
+				simpleheartlogger.log("Increment lvp = {:.2f} rvp = {:.2f}".format(p_lv, p_rv))
 			p_lv_curr = float(self.p_lv)
 			p_rv_curr = float(self.p_rv)
-			contract_curr = float(self.contraction)
 			dispvec_curr = self.d.vector().copy()
 
 			try:
-				self.minimize_energy(p_lv, p_rv, contract)
+				self.minimize_energy(p_lv, p_rv)
 			except Exception as Ex:
 				simpleheartlogger.log(Ex)
 				simpleheartlogger.log("Nonlinear solver failed, reducing pressure-contraction increments.")
 				self.p_lv.assign(p_lv_curr)
 				self.p_rv.assign(p_rv_curr)
-				self.contraction.assign(contract_curr)
 				self.d.vector()[:] = dispvec_curr
 				
 				self.continuity_solve(p_lv_next,
 									  p_rv_next,
-									  contraction_next, 
 									  p_lv_inc = p_lv_inc/2,
-									  p_rv_inc = p_rv_inc/2,
-									  contract_inc = contract_inc/2)
+									  p_rv_inc = p_rv_inc/2)
 			simpleheartlogger.decrease_tab()
 		simpleheartlogger.decrease_tab()
 
 	def get_cavity_volumes(self):
 		return df.assemble(self.Vol_lv), df.assemble(self.Vol_rv)
-
-def output_pressure_volume_trace(times, pressures, vols, outpath):
-	plt.plot(np.array(times), np.array(vols))
-	plt.xlabel("time (ms)")
-	plt.ylabel("volume (ml)")
-	plt.ylim(bottom =0)
-	plt.savefig(outpath + "_volume_trace.png")
-	plt.clf()
-	
-	plt.plot(np.array(vols), np.array(pressures))
-	plt.xlabel("volume (ml)")
-	plt.xlim(left = 0)
-	plt.ylabel("pressure (kPa)")
-	plt.ylim(bottom = 0)
-	plt.savefig(outpath + "_pv_loop.png")
-	plt.clf()
-
-def simulate_cardiac_motion(bivgeo,
-		                    input_data,
-		                    simpleheart_config):
-
-	mechsolver = MechanicsSolver(bivgeo, simpleheart_config)
-	#input_data = pd.read_csv(simpheart_config["pvdata"])
-
-	#Start at the point of least contraction
-	i_start = input_data["contraction"].argmin()
-	input_data = input_data.reindex(np.roll(input_data.index, -i_start))
-
-	times = np.array(input_data["time (ms)"])
-	p_lvs = np.array(input_data["lv pressure (kPa)"])
-	p_rvs = np.array(input_data["rv pressure (kPa)"])
-	contractions = np.array(input_data["contraction"])
-	
-	trace_recorder, disp_recorder = make_solution_recorders(simpleheart_config["output"]["files"]["path"])
-
-	for t, p_lv, p_rv, contraction in zip(times, p_lvs, p_rvs, contractions):
-		mechsolver.continuity_solve(p_lv,
-									p_rv,
-									contraction)
-
-		lv_vol, rv_vol = mechsolver.get_cavity_volumes()
-			
-		trace_recorder.update(t,
-							  contraction,
-							  lv_vol,
-							  rv_vol,
-							  p_lv,
-							  p_rv)
-
-		trace_recorder.save()
-		trace_recorder.print_latest()
-		disp_recorder.save(mechsolver.d, t)
-
-	disp_recorder.reorder_to_xdmf(mechsolver, np.sort(times))
