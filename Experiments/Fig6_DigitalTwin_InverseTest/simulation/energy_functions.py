@@ -33,6 +33,8 @@ def get_paramnames_in_order(efuncname):
 		paramnames = ["p1", "p2", "p3", "p4"]
 	elif efuncname == "holzapfel-ogden":
 		paramnames = ["a", "b", "a_f", "b_f", "a_s", "b_s", "a_fs", "b_fs"]
+	elif efuncname == "martonova3":
+		paramnames = ["mu", "a_f", "b_f", "a_n", "b_n"]
 	return paramnames
 
 def get_efuncclass(efuncname):
@@ -41,7 +43,11 @@ def get_efuncclass(efuncname):
 	elif efuncname == "chesra2":
 		Efunc = Chesra2
 	elif efuncname == "holzapfel-ogden":
-		Efunc = HolzapfelOgden
+		Efunc = HolzapfelOgden	
+	elif efuncname == "martonova3":
+		Efunc = Martonova3
+	else:
+		raise NotImplementedError(f"Cannot recognize energy function {efuncname}")
 	return Efunc
 
 def make_energy_function(mesh, Cbar, e_f, e_s, e_n, efunc_name, matparams_dict):
@@ -89,6 +95,9 @@ class StrainEnergyFunction(object):
 		self.nI8_sn = self.I8_sn**2
 		self.nI8_nf = self.I8_nf**2
 
+	def _scaled_exponential(self, a, b, argument):
+		return (a/(2.0*b))*(df.exp(b*argument) - 1)
+
 class Chesra1(StrainEnergyFunction):
 	def __init__(self, Cbar, e_f, e_s, e_n, matparams):
 		super(Chesra1, self).__init__(Cbar, e_f, e_s, e_n, matparams)
@@ -117,6 +126,53 @@ class HolzapfelOgden(StrainEnergyFunction):
 		pi += df.conditional(df.gt(self.I4_s, 1.0), self._scaled_exponential(a_s, b_s, (self.I4_s - 1)**2), 0.0)
 		pi += self._scaled_exponential(a_fs, b_fs, self.I8_fs**2)
 		return pi
+
+class Martonova3(StrainEnergyFunction):
+	def __init__ (self, Cbar, e_f, e_s, e_n, matparams):
+		super(Martonova3, self).__init__(Cbar, e_f, e_s, e_n, matparams)
 	
-	def _scaled_exponential(self, a, b, argument):
-		return (a/(2.0*b))*(df.exp(b*argument) - 1)
+	def energy(self):
+		mu, a_f, b_f, a_n, b_n = df.split(self.matparams.values)
+		pi = 0.5*mu*(self.nI2) 
+		pi += self._scaled_exponential(a_f, b_f, self.nI4_f)
+		pi += self._scaled_exponential(a_n, b_n, self.nI4_n)
+		return pi
+
+class ActiveHaoEnergy(HolzapfelOgden):
+	def __init__(self, Cbar, e_f, e_s, matparams):
+		self.Cbar = Cbar
+		self.e_f = e_f
+		self.e_s = e_s
+		self.matparams = matparams
+
+	def _compute_invariants(self, Cbar, mp):
+		gamma = mp["gamma"]
+
+		# Must be updated when gamma is not a Constant
+		mgamma = 1 - gamma
+
+		#Isotropic
+		I1 = mgamma * df.tr(Cbar) + (1/mgamma**2 - mgamma) * df.dot(self.e_f, Cbar*self.e_f)
+
+		# Fibers
+		I4_f = 1/mgamma**2 * df.dot(self.e_f, Cbar*self.e_f)
+
+		# Sheets
+		I4_s = mgamma * df.dot(self.e_s, Cbar*self.e_s)
+
+		# Fiber-sheets
+		I8_fs = 1/df.sqrt(mgamma) * df.dot(self.e_f, Cbar*self.e_s)
+		return I1, I4_f, I4_s, I8_fs
+
+	def energy(self):
+		mp = self.matparams
+		I1, I4_f, I4_s, I8_fs = self._compute_invariants(self.Cbar, mp)
+
+		pi_int = self._scaled_exponential(mp["a"], mp["b"], (I1 - 3))
+		
+		pi_int  += df.conditional(df.gt(I4_f, 1.0), self._scaled_exponential(mp["a_f"], mp["b_f"], (I4_f - 1)**2), 0.0)
+		
+		pi_int += df.conditional(df.gt(I4_s, 1.0), self._scaled_exponential(mp["a_s"], mp["b_s"], (I4_s - 1)**2), 0.0)
+
+		pi_int += self._scaled_exponential(mp["a_fs"], mp["b_fs"], I8_fs**2)
+		return pi_int
