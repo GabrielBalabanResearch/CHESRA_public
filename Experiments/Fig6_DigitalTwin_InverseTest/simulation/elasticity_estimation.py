@@ -72,7 +72,7 @@ class DisplacementSquareLoss(object):
         total_loss = sum(total_loss) 
 
         if self.printlosses:
-                simpleheartlogger.log("Total loss = {:.2f}".format(loss_t))
+                simpleheartlogger.log("Total loss = {:.2f}".format(total_loss))
         return total_loss
 
     def _reevaluate_if_new_matparams(self, matparamvals):
@@ -146,7 +146,7 @@ def estimate_elasticity_displacementloss(simpleheart_config):
     opt_method = simpleheart_config["elasticity_estimation"]["method"]
 
     simpleheartlogger.log("-"*80 + f"\nStarting Optimization with method {opt_method}\n" + "-"*80)
-
+    
     opt_result = minimize(squareloss,
                           ini_guess,
                           method = opt_method,
