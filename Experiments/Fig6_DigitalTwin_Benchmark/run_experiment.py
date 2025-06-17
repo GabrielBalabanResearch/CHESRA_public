@@ -20,22 +20,22 @@ def main(energy_function):
     simulation_params = yaml.load(open("simulation/simulation_config.yaml", "r"), Loader = yaml.SafeLoader)
     lhs_sample = pd.DataFrame(experiment_params["latin_hypercube_samples"][energy_function])
     
-    runs = np.arange(args.run_start, args.run_end)
+    run_nums = np.arange(args.run_start, args.run_end)
     lhs_subsample = lhs_sample.iloc[run_nums]
 
     for i, lhs_params in lhs_subsample.iterrows():
         simulation_params["energy_function"] = energy_function
         simulation_params["material_parameters"] = dict(lhs_params) 
-        simulation_params["mesh"]["path"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo.hdf5"
-        simulation_params["mesh"]["microstructure"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo_microstructure.h5"
-        simulation_params["mechdata"] = f"synthetic_targetdata/pressure_traces.csv"
+        simulation_params["mesh"]["path"] =  f"digital_twin_data/{energy_function}/unloaded_geo.hdf5"
+        simulation_params["mesh"]["microstructure"] =  f"digital_twin_data/{energy_function}/unloaded_geo_microstructure.h5"
+        simulation_params["mechdata"] = f"digital_twin_data/pressure_traces.csv"
         simulation_params["output"]["files"]["path"] = f"results/{energy_function}/{i}"
         simulation_params["output"]["files"]["logfile"] = f"results/{energy_function}/parameter_estimation.log"
     
         simpleheartlogger.logpath = f"results/{energy_function}/{i}/paramest.log"
 
         simulation_params["elasticity_estimation"]["lower_bound"] = list(experiment_params["optimization_lower_bounds"][energy_function].values())
-        simulation_params["elasticity_estimation"]["displacement_db"] = f"synthetic_targetdata/{energy_function}/noisy_disps/{i}_{DISP_NOISE}.hdf5"
+        simulation_params["elasticity_estimation"]["displacement_db"] = f"digital_twin_data/{energy_function}/noisy_disps/{i}_{DISP_NOISE}.hdf5"
         
         simpleheartlogger.log(pretty_print_dict(simulation_params))
         
@@ -44,8 +44,9 @@ def main(energy_function):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-energy_function",
-                          choices = ["chesra1", "chesra2", "martonova3", "holzapfel-ogden"],
-                          default = "chesra1")
+                         choices = ["chesra1", "chesra2", "martonova3", "holzapfel-ogden"],
+                         default = "chesra1")
+
     parser.add_argument("-run_start",
                           type = int,
                           default = 0)
