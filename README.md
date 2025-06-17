@@ -36,15 +36,15 @@ Fig. 1: Overview of CHESRA
 >yaml = 6.0.2
 
 
-## Examples
+## Experiment Reproduction
 
-We provide 3 examples: creating SEFs with CHESRA and visualizing their fits to experimental data, assessing the parameter 
-variability when fitting CHESRA functions to tissue data and comparison to state-of-the art SEFs, as well as assessment 
+We provide three reproduction scripts: 1) for creating SEFs with CHESRA and visualizing their fits to experimental data
+2) for benchmarking the parameter variability when fitting CHESRA functions to tissue data and comparison to state-of-the art SEFs 3) for benchmarking 
 of parameter variability in 3-D digital twins. 
 
 0. Download repository and all required packages
 
-2. Create SEFs with CHESRA
+1. Create SEFs with CHESRA
 
 >`cd Experiments/Fig4_CHESRAFunctions`
 > 
@@ -77,4 +77,7 @@ of parameter variability in 3-D digital twins.
 >`python3 run_experiment.py -energy_function martonova3`
 > 
 > (Plotting code to be added soon)
+
+## The Digital Twin Data
+The digital twin benchark requires LV pressure-volume traces, pressure-free biventricular geometries and corresponding synthetic motion fields. For the sake of completeness the original (pressurized) mesh at end-diastole is included as the file `pressurized_bivmesh_60fibres.h5`.
 
