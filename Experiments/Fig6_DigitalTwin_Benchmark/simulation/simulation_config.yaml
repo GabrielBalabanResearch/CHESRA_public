@@ -5,7 +5,6 @@ elasticity_estimation:
   optimization_tol: 1.0e-06
   printlosses: true
 energy_function: chesra1
-load_checkpoint: ''
 material_parameters: ""
 mechdata: ""
 mesh:
@@ -41,7 +40,6 @@ output:
   files:
     logfile: ""
     path: ""
-    timestamp: true
   screen:
     PV_incrementer: false
     continuity_solver: false
