@@ -3,6 +3,7 @@ import numpy as np
 import yaml
 import pandas as pd
 import dolfin as df
+import os
 
 from simulation.elasticity_estimation import estimate_elasticity_displacementloss
 from simulation.helpers import set_ffc_params, pretty_print_dict, simpleheartlogger
@@ -11,6 +12,17 @@ from simulation.helpers import set_ffc_params, pretty_print_dict, simpleheartlog
 OPT_ALGORITHM = "TNC" #trust-krylov
 OPT_TOL = 1e-6
 DISP_NOISE = 0.5
+
+def convert_numpy_scalars_to_python(data):
+    """Recursively convert numpy scalar values to Python native types."""
+    if isinstance(data, dict):
+        return {key: convert_numpy_scalars_to_python(value) for key, value in data.items()}
+    elif isinstance(data, np.generic):  # Check for numpy scalar types
+        return float(data)
+    elif isinstance(data, list):
+        return [convert_numpy_scalars_to_python(item) for item in data]
+    else:
+        return data
 
 def main(energy_function):
     set_ffc_params()
@@ -39,6 +51,12 @@ def main(energy_function):
         
         simpleheartlogger.log(pretty_print_dict(simulation_params))
         
+        config_file = os.path.join(simulation_params["output"]["files"]["path"], "config_params.yaml")
+        
+        yaml.dump(convert_numpy_scalars_to_python(simulation_params),
+                  open(config_file, "w"), 
+                  default_flow_style = False)
+
         estimate_elasticity_displacementloss(simulation_params)
 
 if __name__ == "__main__":

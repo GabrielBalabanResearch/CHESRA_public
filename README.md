@@ -76,7 +76,7 @@ of parameter variability in 3-D digital twins.
 > 
 >`python3 run_experiment.py -energy_function martonova3`
 > 
-> (Plotting code to be added soon)
+>`python3 create_figure.py`
 
 ## The Digital Twin Data
 The digital twin benchark requires LV pressure-volume traces, pressure-free biventricular geometries and corresponding synthetic motion fields. For the sake of completeness the original (pressurized) mesh at end-diastole is included as the file `pressurized_bivmesh_60fibres.h5`.
