@@ -221,10 +221,13 @@ def plot_errors(paramerrors, gt_yaml, ax, color, title = None, Y_CUT = 3.5):
     paramnames = gt_yaml.keys()
     x_labels = ["$" + pname.replace('_', '_{') + '}$' if '_' in pname else "$" + pname + "$" for pname in gt_yaml.keys()]
 
-    #ax.grid(zorder = 0)
-
     long_df = pd.melt(paramerrors, value_vars=paramnames, var_name="Parameter", value_name="Value")
-    sns.boxplot(x="Parameter", y="Value", data=long_df, ax=ax, color = color, zorder = 10)
+    sns.boxplot(x="Parameter",
+                y="Value",
+                data=long_df,
+                ax=ax,
+                color = color,
+                zorder = 10)
     
     for patch in ax.patches:
         patch.set_alpha(1)
@@ -244,5 +247,5 @@ def plot_errors(paramerrors, gt_yaml, ax, color, title = None, Y_CUT = 3.5):
         ax.set_title(title, loc = "left", fontsize = 16, weight = "bold")
 
 if __name__ == "__main__":
-    #gather_results()
+    gather_results()
     plot_results()
