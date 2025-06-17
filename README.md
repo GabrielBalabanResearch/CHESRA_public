@@ -88,6 +88,6 @@ The digital twin benchark requires LV pressure-volume traces, pressure-free bive
 
 **Important Notice: Git LFS Required**
 >
-> This repository uses [Git Large File Storage (Git LFS)](https://git-lfs.github.com/) to manage large files (e.g., `digital_twin_data.zip`). You will need to install and configure git LFS before cloning this repository to access the digital twin data.
+> This repository uses [Git Large File Storage (Git LFS)](https://git-lfs.github.com/) to manage large files (e.g., `digital_twin_data.zip`). You will need to install and configure git LFS *before* cloning this repository to access the digital twin data.
 
 
