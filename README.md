@@ -78,6 +78,11 @@ of parameter variability in 3-D digital twins.
 > 
 >`python3 create_figure.py`
 
-## The Digital Twin Data
-The digital twin benchark requires LV pressure-volume traces, pressure-free biventricular geometries and corresponding synthetic motion fields. These data are included in the file `digital_twin_data.zip` and should unzipped before running the digital twin benchmark. For the sake of completeness the original (pressurized) mesh at end-diastole is included as the file `pressurized_bivmesh_60fibres.h5`.
+## Digital Twin Data
+The digital twin benchark requires LV pressure-volume traces, pressure-free biventricular geometries and corresponding synthetic motion fields. These data are included in the file `digital_twin_data.zip` and should unzipped before running the digital twin benchmark. For the sake of completeness the original (pressurized) mesh at end-diastole is included as the file `pressurized_bivmesh_60fibres.h5`. To access the digital twin data you can use [Git LFS](https://git-lfs.com/).
+
+>`git lfs fetch`
+> 
+>`git lfs checkout`
+
 

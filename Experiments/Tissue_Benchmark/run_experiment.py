@@ -11,8 +11,6 @@ sys.path.insert(0, p)
 from CHESRA.data_classes.shear_sommer import ShearSommer
 from CHESRA.data_classes.shear_dokos import ShearDokos
 
-
-
 ########################################################################################################################
 # Definition of functions under consideration
 ########################################################################################################################
