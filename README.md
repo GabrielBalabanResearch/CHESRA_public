@@ -46,7 +46,7 @@ of parameter variability in 3-D digital twins.
 
 1. Create SEFs with CHESRA
 
->`cd Experiments/Fig4_CHESRAFunctions`
+>`cd Experiments/CHESRAFunctions`
 > 
 >`python3 run_experiment.py`
 > 
@@ -58,7 +58,7 @@ of parameter variability in 3-D digital twins.
 
 
 2. Parameter variability benchmark using tissue data
->`cd Experiments/Fig5_Tissue_Benchmark`
+>`cd Experiments/Tissue_Benchmark`
 > 
 >`python3 run_experiment.py`
 > 
@@ -66,7 +66,7 @@ of parameter variability in 3-D digital twins.
 
 3. Parameter variability benchmark using a 3D digital twin
 
->`cd Experiments/Fig6_DigitalTwin_Benchmark`
+>`cd Experiments/DigitalTwin_Benchmark`
 > 
 >`python3 run_experiment.py -energy_function chesra1`
 > 
