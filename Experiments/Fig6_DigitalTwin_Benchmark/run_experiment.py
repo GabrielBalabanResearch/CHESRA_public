@@ -19,9 +19,11 @@ def main(energy_function):
     experiment_params = yaml.load(open("experiment_params.yaml", "r"), Loader = yaml.SafeLoader)
     simulation_params = yaml.load(open("simulation/simulation_config.yaml", "r"), Loader = yaml.SafeLoader)
     lhs_sample = pd.DataFrame(experiment_params["latin_hypercube_samples"][energy_function])
+    
+    runs = np.arange(args.run_start, args.run_end)
+    lhs_subsample = lhs_sample.iloc[run_nums]
 
-    for i, lhs_params in lhs_sample.iterrows():
-        
+    for i, lhs_params in lhs_subsample.iterrows():
         simulation_params["energy_function"] = energy_function
         simulation_params["material_parameters"] = dict(lhs_params) 
         simulation_params["mesh"]["path"] =  f"synthetic_targetdata/{energy_function}/unloaded_geo.hdf5"
@@ -44,5 +46,12 @@ if __name__ == "__main__":
     parser.add_argument("-energy_function",
                           choices = ["chesra1", "chesra2", "martonova3", "holzapfel-ogden"],
                           default = "chesra1")
+    parser.add_argument("-run_start",
+                          type = int,
+                          default = 0)
+
+    parser.add_argument("-run_end",
+                          type = int,
+                          default = 20)
     args = parser.parse_args()
     main(args.energy_function)
