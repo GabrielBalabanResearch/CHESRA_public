@@ -1,17 +1,20 @@
 from pathlib import Path
+from matplotlib import pyplot as plt
 import argparse
 import os
 import pandas as pd
 import yaml
 import ast
 import re
+import numpy as np
+import seaborn as sns
 
-PARENT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+RESULTS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
-def main():
+def gather_results():
     matparam_names_all = {}
     results_all = {}
-    for dirpath, dirnames, filenames in os.walk(PARENT_FOLDER):
+    for dirpath, dirnames, filenames in os.walk(RESULTS_FOLDER):
         if "optresults.txt" in filenames:
             energy_function, run_number = Path(dirpath).parts[-2:]
 
@@ -152,5 +155,94 @@ def find_total_loss_values(file_path):
     
     return matching_lines, loss_values
 
+def plot_results():
+    gt_params = yaml.load(open("experiment_params.yaml", "r"), Loader = yaml.SafeLoader)["ground_truth"]
+    
+    lhs_results_root = os.path.join(RESULTS_FOLDER, "gathered")
+    
+    chesra1_results_file = os.path.join(lhs_results_root,"chesra1_results.csv")
+    chesra2_results_file = os.path.join(lhs_results_root, "chesra2_results.csv")
+    hao_results_file = os.path.join(lhs_results_root, "holzapfel-ogden_results.csv")
+    mart_results_file = os.path.join(lhs_results_root, "martonova3_results.csv")
+
+    chesra1_df = pd.read_csv(chesra1_results_file)
+    chesra2_df = pd.read_csv(chesra2_results_file)
+    hao_df = pd.read_csv(hao_results_file)
+    mart_df = pd.read_csv(mart_results_file)
+
+    chesra1_paramerrors = calc_relerror(chesra1_df, gt_params["chesra1"])
+    chesra2_paramerrors = calc_relerror(chesra2_df, gt_params["chesra2"])
+    hao_paramerrors = calc_relerror(hao_df, gt_params["holzapfel-ogden"])
+    mart_paramerrors = calc_relerror(mart_df, gt_params["martonova3"])
+
+    fig, axs = plt.subplots(1, 4, figsize=(12, 6), sharey=True)
+
+    hao_labels = ["$" + label.replace('_', '_{') + '}$' if '_' in label else "$" + label + "$" for label in gt_params["holzapfel-ogden"].keys()]
+
+    plot_errors(chesra1_paramerrors, 
+                gt_params["chesra1"], 
+                axs[0],
+                "pink",
+                "$\psi_{CH1}$")
+
+    plot_errors(chesra2_paramerrors,
+                chesra2_gt_yaml,
+                axs[1],
+                "lightblue",
+                "$\psi_{CH2}$")
+    
+    plot_errors(mart_paramerrors,
+                gt_params["martonova3"],
+                 axs[2],
+                "purple",
+                "$\psi_{MA}$")
+
+    plot_errors(hao_paramerrors,
+                gt_params["holzapfel-ogden"],
+                axs[3],
+                "orange",
+                "$\psi_{HO}$")
+
+    axs[0].set_ylabel("Normalized error")
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig("digital_twin_benchmark.png")
+    plt.show()
+    
+
+def calc_relerror(df, gt_yaml):
+    errors = []
+    for param in gt_yaml.keys():
+        errors.append(np.abs((df["est_" + param] - gt_yaml[param])/gt_yaml[param]))
+    return pd.DataFrame(np.array(errors).T, columns = gt_yaml.keys())
+
+def plot_errors(paramerrors, gt_yaml, ax, color, title = None, Y_CUT = 3.5):
+    paramnames = gt_yaml.keys()
+    x_labels = ["$" + pname.replace('_', '_{') + '}$' if '_' in pname else "$" + pname + "$" for pname in gt_yaml.keys()]
+
+    #ax.grid(zorder = 0)
+
+    long_df = pd.melt(paramerrors, value_vars=paramnames, var_name="Parameter", value_name="Value")
+    sns.boxplot(x="Parameter", y="Value", data=long_df, ax=ax, color = color, zorder = 10)
+    
+    for patch in ax.patches:
+        patch.set_alpha(1)
+    
+    ax.set_xticklabels(x_labels)
+    ax.set_ylabel("")
+    ax.set_yticks(np.arange(0, Y_CUT*2)/2.0)
+    ax.set_ylim(0, Y_CUT)
+
+    # Identify and mark outliers
+    for i, param in enumerate(paramnames):
+        outliers = paramerrors[paramerrors[param] > Y_CUT][param]
+        if not outliers.empty:
+            ax.scatter([i] * len(outliers), [Y_CUT] * len(outliers), color="red", marker="^", s=100, label="Outlier")
+
+    if title:
+        ax.set_title(title, loc = "left", fontsize = 16, weight = "bold")
+
 if __name__ == "__main__":
-    main()
+    #gather_results()
+    plot_results()
