@@ -186,7 +186,7 @@ def plot_results():
                 "$\psi_{CH1}$")
 
     plot_errors(chesra2_paramerrors,
-                chesra2_gt_yaml,
+                gt_params["chesra2"],
                 axs[1],
                 "lightblue",
                 "$\psi_{CH2}$")
@@ -210,7 +210,6 @@ def plot_results():
     plt.savefig("digital_twin_benchmark.png")
     plt.show()
     
-
 def calc_relerror(df, gt_yaml):
     errors = []
     for param in gt_yaml.keys():
@@ -241,7 +240,7 @@ def plot_errors(paramerrors, gt_yaml, ax, color, title = None, Y_CUT = 3.5):
     for i, param in enumerate(paramnames):
         outliers = paramerrors[paramerrors[param] > Y_CUT][param]
         if not outliers.empty:
-            ax.scatter([i] * len(outliers), [Y_CUT] * len(outliers), color="red", marker="^", s=100, label="Outlier")
+            ax.scatter([i] * len(outliers), [Y_CUT] * len(outliers), color="red", marker="*", s=100, label="Outlier")
 
     if title:
         ax.set_title(title, loc = "left", fontsize = 16, weight = "bold")
