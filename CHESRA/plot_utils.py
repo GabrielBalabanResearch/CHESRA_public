@@ -41,8 +41,8 @@ def plot_sheardata(ax, model_df, experiment_df, datacolor, markersize = 7, alpha
         expr_modedata_df = experiment_df.query("mode == '{}'".format(mode))
         
         #Data
-        ax.plot(expr_modedata_df["x"], 
-                expr_modedata_df["y"],
+        ax.plot(expr_modedata_df["x"].array, 
+                expr_modedata_df["y"].array,
                 markersize = markersize,
                 markeredgewidth = 2,
                 marker = "o",
@@ -56,9 +56,8 @@ def plot_sheardata(ax, model_df, experiment_df, datacolor, markersize = 7, alpha
         expr_modedata_df = experiment_df.query("mode == '{}'".format(mode))
         #         model_cutoff_df = model_df[model_df[mode] <= 1.05*expr_modedata_df["y"].max()]
         model_cutoff_df = model_df[model_df['x'] <= lim[i]*expr_modedata_df["x"].max()]
-        
-        ax.plot(model_cutoff_df["x"], 
-                model_cutoff_df[mode],
+        ax.plot(model_cutoff_df["x"].array, 
+                model_cutoff_df[mode].array,
                 color = "k",
                 linestyle = '-',
                 zorder = 20)
@@ -103,8 +102,8 @@ def plot_biaxial_data(axs, dataset_name, marker_dict, marker_var, model_df, expe
             xy_experiment_df = experiment_protocol_df.query(querystr)
 
             i_x = i_strain + x_ax_offset
-            axs[i_x].plot(xy_experiment_df["x"],
-                          xy_experiment_df["y"],
+            axs[i_x].plot(xy_experiment_df["x"].array,
+                          xy_experiment_df["y"].array,
                           marker=marker_dict[marker_varval],
                           markersize=markersize,
                           markerfacecolor="none",
@@ -117,8 +116,8 @@ def plot_biaxial_data(axs, dataset_name, marker_dict, marker_var, model_df, expe
 
             model_cutoff_df = model_df[np.logical_and(x_cutoff, y_cutoff)]
 
-            axs[i_x].plot(model_cutoff_df["x"],
-                          model_cutoff_df[y_string],
+            axs[i_x].plot(model_cutoff_df["x"].array,
+                          model_cutoff_df[y_string].array,
                           color="k", zorder=20)
 
 

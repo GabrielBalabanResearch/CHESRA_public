@@ -21,22 +21,36 @@ from CHESRA.plot_utils import dataset_colors, latex_emph, dataset_annotate, plot
 # Plot results
 ########################################################################################################################
 
+def color_boxplot(res, color):
+    # Set the color for the boxes
+    for box in res['boxes']:
+        box.set_facecolor(color)
+
+    # Optionally, customize other elements like whiskers, caps, medians, etc.
+    for whisker in res['whiskers']:
+        whisker.set_color(color)
+    for cap in res['caps']:
+        cap.set_color(color)
+    for median in res['medians']:
+        median.set_color(color)
+
+    for flier in res['fliers']:
+        flier.set_markerfacecolor(dataset_colors[data_colname])  # Set the face color of the outliers
+        flier.set_markeredgecolor("k")  # Optionally set the edge color
+
 params_dist_df = pd.read_csv('plot_data/params_dist_df.csv')
 gof_dists_df = pd.read_csv('plot_data/gof_dists_df.csv')
 sRSS_df = pd.read_csv('plot_data/sRSS_df.csv')
 
 
 num_params = [3, 4, 8, 7, 12, 12]
-psi_names = ['CH1', 'CH2', 'HO', 'CL', 'SFL', 'PZL']
+psi_names = ['CH1', 'CH2', 'MA', 'CL', 'HO']
+
 param_names = {'CH1':['$p_{1}$', '$p_{2}$', '$p_{3}$'],
                'CH2':['$p_{1}$', '$p_{2}$', '$p_{3}$', '$p_{4}$'],
-             'HO':['$a$', '$b$', '$a_{f}$', '$b_{f}$', '$a_{n}$', '$b_{n}$', '$a_{fs}$', '$b_{fs}$'],
-             'CL':['$a$', '$b_{ff}$', '$b_{fn}$', '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$'],
-             'SFL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$b_{ff}$', '$b_{fn}$',
-                    '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$'],
-             'PZL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$k_{ff}$', '$k_{fn}$',
-                    '$k_{fs}$', '$k_{nn}$', '$k_{ns}$', '$k_{ss}$'],
-             'GL':['$C$', '$b_{f}$', '$b_{t}$', '$b_{fs}$']}
+               'MA':['$\mu$', '$a_f$', '$b_f$', '$a_n$', '$b_n$'],
+               'HO':['$a$', '$b$', '$a_{f}$', '$b_{f}$', '$a_{n}$', '$b_{n}$', '$a_{fs}$', '$b_{fs}$'],
+               'CL':['$a$', '$b_{ff}$', '$b_{fn}$', '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$']}
 
 data_names = ['Shear Dokos', 'Shear Sommer']
 
@@ -252,18 +266,12 @@ for j, dataset, axs in zip(range(2),
         ax.annotate(r'$\overline{c}_p = %.1f,$ $\overline{n}_\mathrm{fev}= %.0f$' % (sav, nfev),
                         (0.05, 0.92), xycoords="axes fraction", size=fs, va='top')
 
-
-        res = ax.violinplot([np.array(model_sommer_df.query("variable == '{}'".format(varname))["value"]) for varname in
-                             param_names[funcname]],
-                            showmeans=False,
-                            showmedians=True,
-                            showextrema=False)
-
-        for pc in res['bodies']:
-            data_colname = " ".join(np.flip(dataset.split()))
-            pc.set_facecolor(dataset_colors[data_colname])
-            pc.set_edgecolor(dataset_colors[data_colname])
-        res["cmedians"].set_color("k")
+        data_colname = " ".join(np.flip(dataset.split()))
+        res = ax.boxplot([np.array(model_sommer_df.query("variable == '{}'".format(varname))["value"]) for varname in
+                          param_names[funcname]],
+                          patch_artist = True)
+        
+        color_boxplot(res, dataset_colors[data_colname])
 
         ax.set_yscale('symlog')
 
@@ -324,22 +332,26 @@ for i, funcname in enumerate(psi_names):
 for i, dataset in enumerate(["Shear Sommer", "Shear Dokos"]):
     gofdist_data = [np.array(gof_dists_df.query("model == '{}' and dataset == '{}'".format(modelname, dataset))["GoF"])
                     for modelname in psi_names]
+    
     # print(gofdist_data)
-    res = gofdist_axs[i].violinplot(gofdist_data,
-                                    showmeans=False,
-                                    showmedians=True,
-                                    showextrema=False)
+    data_colname = " ".join(np.flip(dataset.split()))
+    res = gofdist_axs[i].boxplot(gofdist_data,
+                                patch_artist=True)
+                                    #showmeans=False,
+                                    #showmedians=True,
+                                    #showextrema=False)
+    color_boxplot(res, dataset_colors[data_colname])
 
     gofdist_axs[i].set_xticks(list(range(1, len(psi_names) + 1)),
                               funcnames_latex,
                               ha='center',
                               rotation=0)
 
-    for pc in res['bodies']:
-        data_colname = " ".join(np.flip(dataset.split()))
-        pc.set_facecolor(dataset_colors[data_colname])
-        pc.set_edgecolor(dataset_colors[data_colname])
-    res["cmedians"].set_color("k")
+    #for pc in res['bodies']:
+    #    data_colname = " ".join(np.flip(dataset.split()))
+    #    pc.set_facecolor(dataset_colors[data_colname])
+    #    pc.set_edgecolor(dataset_colors[data_colname])
+    #res["cmedians"].set_color("k")
 
 gofdist_axs[0].set_ylabel("goodness of fit ($f_\mathrm{GoF}$)")
 gofdist_axs[0].set_yscale('log')
