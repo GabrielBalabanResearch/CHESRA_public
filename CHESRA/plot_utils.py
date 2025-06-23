@@ -11,8 +11,16 @@ hue_order = ["Dokos Shear",
              "Novak Equibiaxial",
              "Yin Biaxial"]
 
-palett = sns.color_palette("dark{}".format(len(hue_order)))
-dataset_colors = dict(zip(hue_order, palett))
+okabe_ito = [
+    "#009E73",  # bluish green
+    "#CC79A7",  # reddish purple
+    "#D55E00",  # vermillion
+    "#E69F00",  # orange
+    "#56B4E9",  # sky blue
+    "#0072B2",  # blue
+]
+palett = sns.set_palette(okabe_ito[:len(hue_order)])
+dataset_colors = dict(zip(hue_order, okabe_ito))
 
 def latex_emph(text):
     return "$\\textrm{\\textbf{" + text + "}}$"

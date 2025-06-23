@@ -49,6 +49,23 @@ def psi_CH2(I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p):
 
     return p1*(p2+I5f)*(p3+I1)*(p4+I5s)
 
+def psi_MA(I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p):
+    mu, af, bf, an, bn = p
+
+    I1 = (I1 - 3) ** 2
+    I2 = (I2 - 3) ** 2
+    I4n = (I4n - 1) ** 2
+    I4f = (I4f - 1) ** 2
+    I4s = (I4s - 1) ** 2
+    I5f = (I5f - 1) ** 2
+    I5s = (I5s - 1) ** 2
+    I5n = (I5n - 1) ** 2
+    I8fs = (I8fs) ** 2
+    I8ns = (I8ns) ** 2
+    I8fn = (I8fn) ** 2
+
+    return mu/2 * I2 + af/(2*bf) * (sp.exp(bf*I4f)-1) + an/(2*bn)*(sp.exp(bn*I4n)-1)
+
 def psi_HO(I1, I2, I3, I4f, I4s, I4n, I5f, I5s, I5n, I8fs, I8fn, I8ns, p):
     p1, p2, p3, p4, p5, p6, p7, p8 = p
 
@@ -96,18 +113,19 @@ def psi_GL(Eff, Efs, Efn, Esf, Ess, Esn, Enf, Ens, Enn, p):
 # Perform the inverse tests
 ########################################################################################################################
 
-psi_lst = [psi_CH1, psi_CH2, psi_HO, psi_CL, psi_SFL, psi_PZL]
-num_params = [3, 4, 8, 7, 12, 12]
-psi_names = ['CH1', 'CH2', 'HO', 'CL', 'SFL', 'PZL']
+psi_lst = [psi_CH1, psi_CH2, psi_MA, psi_HO, psi_CL] #, psi_SFL, psi_PZL]
+num_params = [3, 4, 5, 8, 7] #, 12, 12]
+psi_names = ['CH1', 'CH2', 'MA', 'HO', 'CL', 'SFL', 'PZL']
 param_names = {'CH1':['$p_{1}$', '$p_{2}$', '$p_{3}$'],
                'CH2':['$p_{1}$', '$p_{2}$', '$p_{3}$', '$p_{4}$'],
-             'HO':['$a$', '$b$', '$a_{f}$', '$b_{f}$', '$a_{n}$', '$b_{n}$', '$a_{fs}$', '$b_{fs}$'],
-             'CL':['$a$', '$b_{ff}$', '$b_{fn}$', '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$'],
-             'SFL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$b_{ff}$', '$b_{fn}$',
+               'MA':['$\mu$', '$a_{f}$', '$b_{f}$', '$a_{n}$', '$b_{n}$'],
+               'HO':['$a$', '$b$', '$a_{f}$', '$b_{f}$', '$a_{n}$', '$b_{n}$', '$a_{fs}$', '$b_{fs}$'],
+               'CL':['$a$', '$b_{ff}$', '$b_{fn}$', '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$'],
+               'SFL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$b_{ff}$', '$b_{fn}$',
                     '$b_{fs}$', '$b_{nn}$', '$b_{ns}$', '$b_{ss}$'],
-             'PZL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$k_{ff}$', '$k_{fn}$',
+               'PZL':['$a_{ff}$', '$a_{fn}$', '$a_{fs}$', '$a_{nn}$', '$a_{ns}$', '$a_{ss}$', '$k_{ff}$', '$k_{fn}$',
                     '$k_{fs}$', '$k_{nn}$', '$k_{ns}$', '$k_{ss}$'],
-             'GL':['$C$', '$b_{f}$', '$b_{t}$', '$b_{fs}$']}
+               'GL':['$C$', '$b_{f}$', '$b_{t}$', '$b_{fs}$']}
 
 data_lst = [ShearDokos(), ShearSommer()]
 data_names = ['Shear Dokos', 'Shear Sommer']
@@ -123,17 +141,19 @@ for d, data in enumerate(data_lst):
     print(data_name)
 
     for i in range(len(psi_lst)):
+        sRSS_max = 0
+        sRSS_min = 1
         psi = psi_lst[i]
         p = num_params[i]
         psi_name = psi_names[i]
         print(psi_name)
-        if psi == psi_CH1 or psi == psi_CH2 or psi == psi_HO:
+        if psi == psi_CH1 or psi == psi_CH2 or psi == psi_HO or psi == psi_MA:
             var = 'I'
         else:
             var = 'E'
 
         # define the initial parameter sets for the optimization
-        num_samples = 3 #100
+        num_samples = 100
         lhs_samples = lhs(p, samples=num_samples)
         param_ranges = (0, 100)
         initial_points = []
@@ -161,6 +181,19 @@ for d, data in enumerate(data_lst):
                     data_save_params['variable'].append(param_name)
                     data_save_params['value'].append(p_best[param_ind])
 
+                if sRSS > sRSS_max:
+                    sRSS_max = sRSS
+                    SSE, Y_a, res, nfev, p_best = data.fit_psi_to_data(psi, p, data_path, plot=True, var=var,
+                                                                       save_to='plot_data/worst/', psi_name=psi_names[i],
+                                                                       init_vals=p_best,
+                                                                       not_vary=range(len(p_best)))
+                if sRSS < sRSS_min:
+                    sRSS_min = sRSS
+                    SSE, Y_a, res, nfev, p_best = data.fit_psi_to_data(psi, p, data_path, plot=True, var=var,
+                                                                       save_to='plot_data/best/', psi_name=psi_names[i],
+                                                                       init_vals=p_best,
+                                                                       not_vary=range(len(p_best)))
+
             # if the optimization does not converge try another set of parameters
             except Exception as e:
                 if trial < 5:
@@ -170,10 +203,8 @@ for d, data in enumerate(data_lst):
                     initial_points.append(scaled_params)
                     trial += 1
 
-        # perform the optimization with all parameters initialized to 1 (for the plot)
-        SSE, Y_a, res, nfev, p_best = data.fit_psi_to_data(psi, p, data_path, plot=True, var=var, save_to='plot_data/', psi_name=psi_names[i])
-        sRSS = (SSE / np.sum((np.array(Y_a) - np.mean(Y_a)) ** 2))
-        data_save_sRSS['sRSS'].append(sRSS)
+
+        data_save_sRSS['sRSS'].append(sRSS_max)
         data_save_sRSS['model'].append(psi_name)
         data_save_sRSS['dataset'].append(data_name)
 
