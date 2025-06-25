@@ -41,7 +41,7 @@ def parse_args():
     parser.add_argument('--opts', nargs='+', default=['+', '*'], help='List of operators to be used to generate strain energy functions')
     parser.add_argument('--check_duplicates', type=bool, default=True, help='Check for duplicates in the population. If True, duplicates will be replaced by random functions.')
     parser.add_argument('--multithread', type=bool, default=True, help='Use multithreading')
-    parser.add_argument('--n_cores', type=int, default=64, help='Number of cores to use for multithreading')
+    parser.add_argument('--n_cores', type=int, default=1, help='Number of cores to use for multithreading')
 
     return parser.parse_args()
 
@@ -89,10 +89,18 @@ if __name__ == '__main__':
     num_params = len(list(dict.fromkeys(re.findall('p[0-9]+', ps)))) + 1
     print('Final CHESRA result:')
     print(ps)
-    print('\tBest function is psi = %s' % sp.simplify(ps))
+    print('\tBest function is psi = %s' % ps)
     print('\tBest fitness is %.1E' % error[lab].tolist()[es])
+
+    with open(args.save_to + "/optimal_function.txt", "w") as f:
+        f.write(ps)
 
     # do the fit
     for data in args.data_lst:
-        SSE, Y_a, res, nfev, p_best = run_function(data.fit_data, ind, num_params, data_path=args.exp_data_path, plot=True, save_to=args.save_to)
+        SSE, Y_a, res, nfev, p_best = run_function(data.fit_data,
+                                                   ind,
+                                                   num_params,
+                                                   data_path=args.exp_data_path,
+                                                   plot=True,
+                                                   save_to=args.save_to)
         sRSS = SSE / np.sum((np.array(Y_a) - np.mean(Y_a)) ** 2)

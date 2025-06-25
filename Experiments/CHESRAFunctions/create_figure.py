@@ -75,6 +75,9 @@ plt.rc('legend', fontsize=fs)    # legend fontsize
 #plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 
+with open("plot_data/optimal_function.txt", "r") as f:
+    optfunc = f.readlines()[0]
+
 ################################
 #Composition and Layout of plots
 ################################
@@ -268,7 +271,5 @@ add_legend_biaxial(novak_equibiaxial_axs[1],
                    data_markers_novak_equibiaxial,
                    r"\textbf{location}",
                    dataset_colors["Novak Equibiaxial"], bbox=(-0.07,1.02))
-
-
-
+fitplot_all_figure.suptitle(optfunc)
 plt.savefig("Fig4_optimal_chesra_fits.png", bbox_inches = "tight")
