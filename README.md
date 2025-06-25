@@ -52,7 +52,7 @@ of parameter variability in 3-D digital twins.
 > 
 >`python3 create_figure.py`
 > 
-**Note:** use the default options to reproduce the results in the paper. Otherwise, all parameters can be adjusted. See
+**Note:** use the default options to run experiments similar to those in the paper. Due to random initial conditions your results may vary.
 
 >`python3 run_experiment.py --help`
 
