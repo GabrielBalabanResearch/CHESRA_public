@@ -290,7 +290,7 @@ for j, dataset, axs in zip(range(2),
                       rotation=rot)
 
 for axs in [sommer_params_axs, dokos_params_axs]:
-    for i in range(4):
+    for i in range(5):
         axs[i].set_yticks([0, 10, 1000, 100000])
         # sommer_params_axs[i].set_yticks([0, 1, 10, 100])
 
